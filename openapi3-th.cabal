@@ -1,0 +1,53 @@
+cabal-version: 3.0
+name:          openapi3-th
+version:       0
+data-files:    examples/**/*.yaml
+
+common base
+  default-language:   GHC2021
+  default-extensions:
+    BlockArguments
+    DerivingStrategies
+    LambdaCase
+    NoImplicitPrelude
+    OverloadedStrings
+    TemplateHaskell
+
+library
+  import:          base
+  build-depends:
+    , aeson
+    , base
+    , containers
+    , filepath
+    , template-haskell
+    , text
+    , vector
+    , yaml
+
+  hs-source-dirs:  library
+
+  -- cabal-fmt: expand library
+  exposed-modules:
+    OpenApiTH
+    OpenApiTH.DataType
+    OpenApiTH.MakeSpecPathType
+    OpenApiTH.ReadSpecFile
+    OpenApiTH.ResolveSpecPath
+    OpenApiTH.Spec
+    OpenApiTH.SpecPath
+
+test-suite test
+  import:         base
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  hs-source-dirs: test examples
+  build-depends:
+    , base
+    , hspec
+    , openapi3-th
+    , template-haskell
+    , text
+
+  -- cabal-fmt: expand examples
+  other-modules:  OpenApiGuide.BasicStructure.Main
