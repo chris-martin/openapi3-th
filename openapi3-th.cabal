@@ -9,9 +9,14 @@ common base
     BlockArguments
     DerivingStrategies
     LambdaCase
+    NoFieldSelectors
     NoImplicitPrelude
+    OverloadedLists
+    OverloadedRecordDot
     OverloadedStrings
     TemplateHaskell
+    TypeFamilies
+    UnicodeSyntax
 
 library
   import:          base
@@ -31,9 +36,12 @@ library
   exposed-modules:
     OpenApiTH
     OpenApiTH.DataType
-    OpenApiTH.MakeSpecPathType
+    OpenApiTH.Declare
+    OpenApiTH.Operation
+    OpenApiTH.Options
     OpenApiTH.ReadSpecFile
     OpenApiTH.ResolveSpecPath
+    OpenApiTH.Schema
     OpenApiTH.Spec
     OpenApiTH.SpecPath
 

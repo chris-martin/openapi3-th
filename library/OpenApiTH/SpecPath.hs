@@ -1,20 +1,20 @@
-{-# options_ghc -fno-warn-missing-methods #-}
+{-# OPTIONS_GHC -fno-warn-missing-methods #-}
 
 module OpenApiTH.SpecPath where
 
 import Prelude
 
-import Data.String
-import Data.Text qualified as Text
-import Data.Text (Text)
-import Numeric.Natural (Natural)
 import Data.Aeson (Key)
 import Data.Aeson.Key qualified as Key
+import Data.String
+import Data.Text (Text)
+import Data.Text qualified as Text
+import Numeric.Natural (Natural)
 
-data SpecPath = SpecPath{ items :: [SpecPathItem] }
+data SpecPath = SpecPath {items ∷ [SpecPathItem]}
 
-data SpecPathItem =
-  SpecPathKey Key
+data SpecPathItem
+  = SpecPathKey Key
   | SpecPathIndex Natural
 
 instance IsString SpecPathItem where

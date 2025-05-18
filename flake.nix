@@ -14,6 +14,8 @@
             (nixpkgs.haskell.lib.justStaticExecutables
               nixpkgs.haskellPackages.cabal-fmt)
             nixpkgs.cabal-install
+            (nixpkgs.haskell.lib.justStaticExecutables
+              nixpkgs.haskellPackages.fourmolu)
           ];
         };
       });

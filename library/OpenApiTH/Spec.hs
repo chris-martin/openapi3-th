@@ -4,4 +4,4 @@ import Prelude
 
 import Data.Aeson qualified as JSON
 
-data Spec = Spec{ value :: JSON.Value }
+data Spec = Spec {value ∷ JSON.Value}

@@ -6,6 +6,6 @@ import Test.Hspec
 
 import OpenApiGuide.BasicStructure.Main
 
-main :: IO ()
+main ∷ IO ()
 main = hspec do
   OpenApiGuide.BasicStructure.Main.spec

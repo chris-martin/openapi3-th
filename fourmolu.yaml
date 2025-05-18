@@ -1,0 +1,10 @@
+indentation: 2
+function-arrows: leading
+record-brace-space: true
+haddock-style: single-line
+let-style: inline
+in-style: right-align
+unicode: always
+respectful: true
+single-constraint-parens: never
+single-deriving-parens: never

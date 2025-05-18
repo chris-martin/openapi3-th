@@ -1,9 +1,9 @@
-module OpenApiTH
-  ( Spec
-  , readSpecFile
-  , readSpecFileJson
-  , readSpecFileYaml
-  ) where
+module OpenApiTH (
+  declare,
+  specFile,
+  operation,
+  operationName,
+) where
 
-import OpenApiTH.Spec
-import OpenApiTH.ReadSpecFile
+import OpenApiTH.Declare
+import OpenApiTH.Options
