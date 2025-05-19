@@ -4,6 +4,7 @@ import Essentials
 
 import Test.Hspec
 
+import Data.Foldable
 import Data.Text (Text)
 import Language.Haskell.TH qualified as TH
 import System.IO (IO)

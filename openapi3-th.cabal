@@ -29,8 +29,10 @@ library
     , quaalude
     , template-haskell
     , text
+    , transformers
     , vector
     , yaml
+    , yield
 
   hs-source-dirs:  library
 
