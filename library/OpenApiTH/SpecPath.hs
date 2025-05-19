@@ -2,7 +2,7 @@
 
 module OpenApiTH.SpecPath where
 
-import Prelude
+import Essentials
 
 import Data.Aeson (Key)
 import Data.Aeson.Key qualified as Key
@@ -10,6 +10,7 @@ import Data.String
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Numeric.Natural (Natural)
+import Prelude (Num (..))
 
 data SpecPath = SpecPath {items ∷ [SpecPathItem]}
 

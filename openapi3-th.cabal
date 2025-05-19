@@ -8,6 +8,7 @@ common base
   default-extensions:
     BlockArguments
     DerivingStrategies
+    DerivingVia
     LambdaCase
     NoFieldSelectors
     NoImplicitPrelude
@@ -25,6 +26,7 @@ library
     , base
     , containers
     , filepath
+    , quaalude
     , template-haskell
     , text
     , vector
@@ -39,6 +41,7 @@ library
     OpenApiTH.Declare
     OpenApiTH.Operation
     OpenApiTH.Options
+    OpenApiTH.OptionsBuilder
     OpenApiTH.ReadSpecFile
     OpenApiTH.ResolveSpecPath
     OpenApiTH.Schema
@@ -54,6 +57,7 @@ test-suite test
     , base
     , hspec
     , openapi3-th
+    , quaalude
     , template-haskell
     , text
 

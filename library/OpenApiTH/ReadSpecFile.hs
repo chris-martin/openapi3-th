@@ -1,13 +1,18 @@
 module OpenApiTH.ReadSpecFile where
 
-import Prelude
+import Essentials
 
 import Control.Monad (when)
+import Control.Monad.Fail
 import Data.Aeson qualified as JSON
+import Data.Either
+import Data.Foldable
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
+import Data.String
 import Data.Yaml qualified as YAML
 import System.FilePath qualified as FilePath
+import System.IO
 
 import OpenApiTH.Spec
 

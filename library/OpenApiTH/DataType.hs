@@ -3,13 +3,15 @@
 -- https://swagger.io/specification/#data-types
 module OpenApiTH.DataType where
 
-import Prelude
+import Essentials
 
 import Control.Arrow
+import Control.Monad.Fail
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.String
 import Data.Text (Text)
+import Prelude (Bounded (..))
 
 data DataType
   = Null
@@ -36,7 +38,7 @@ textDataTypeMap =
   Map.fromList $ (dataTypeString &&& id) <$> [minBound .. maxBound]
 
 textDataTypeMaybe ∷ Text → Maybe DataType
-textDataTypeMaybe = flip Map.lookup textDataTypeMap
+textDataTypeMaybe x = Map.lookup x textDataTypeMap
 
 textDataType ∷ MonadFail m ⇒ Text → m DataType
 textDataType = maybe (fail "Unrecognized type") pure . textDataTypeMaybe

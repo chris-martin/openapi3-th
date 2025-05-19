@@ -1,10 +1,12 @@
 module OpenApiTH.ResolveSpecPath where
 
-import Prelude
+import Essentials
 
+import Control.Monad.Fail
 import Data.Aeson qualified as JSON
 import Data.Aeson.KeyMap qualified as KeyMap
 import Data.Vector qualified as Vector
+import Prelude (fromIntegral)
 
 import OpenApiTH.Spec
 import OpenApiTH.SpecPath

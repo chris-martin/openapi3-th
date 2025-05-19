@@ -1,12 +1,14 @@
 module OpenApiTH.Schema where
 
-import Prelude
-
-import Data.Aeson qualified as JSON
-import Data.Aeson.KeyMap qualified as KeyMap
-import Language.Haskell.TH
+import Essentials
 
 import Control.Monad
+import Data.Aeson qualified as JSON
+import Data.Aeson.KeyMap qualified as KeyMap
+import Data.String
+import Language.Haskell.TH
+
+import Language.Haskell.TH qualified as TH
 import OpenApiTH.DataType
 
 data Schema = Schema {value ∷ JSON.Value}
@@ -32,7 +34,7 @@ data SchemaTypeOptions = SchemaTypeOptions
 defaultSchemaTypeOptions ∷ SchemaTypeOptions
 defaultSchemaTypeOptions = SchemaTypeOptions {name = Nothing}
 
-makeSchemaType ∷ (Quote m, MonadFail m) ⇒ Schema → SchemaTypeOptions → m Type
+makeSchemaType ∷ (Quote m, MonadFail m) ⇒ Schema → SchemaTypeOptions → m TH.Type
 makeSchemaType schema opt = do
   name ← case opt.name of
     Nothing → fail "todo"

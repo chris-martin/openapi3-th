@@ -1,6 +1,6 @@
 module OpenApiTH.Spec where
 
-import Prelude
+import Essentials
 
 import Data.Aeson qualified as JSON
 

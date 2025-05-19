@@ -1,6 +1,6 @@
 module OpenApiTH.Operation where
 
-import Data.Kind (Type)
+import Essentials
 
 type family Request op ∷ Type
 
