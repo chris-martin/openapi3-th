@@ -6,9 +6,11 @@ data-files:    examples/**/*.yaml
 common base
   default-language:   GHC2021
   default-extensions:
+    AllowAmbiguousTypes
     BlockArguments
     DerivingStrategies
     DerivingVia
+    DuplicateRecordFields
     LambdaCase
     NoFieldSelectors
     NoImplicitPrelude
@@ -24,8 +26,10 @@ library
   build-depends:
     , aeson
     , base
+    , bytestring
     , containers
     , filepath
+    , iri
     , quaalude
     , template-haskell
     , text
@@ -41,12 +45,15 @@ library
     OpenApiTH
     OpenApiTH.DataType
     OpenApiTH.Declare
+    OpenApiTH.HttpRequest
     OpenApiTH.Operation
     OpenApiTH.Options
     OpenApiTH.OptionsBuilder
     OpenApiTH.ReadSpecFile
+    OpenApiTH.RequestMessage
     OpenApiTH.ResolveSpecPath
     OpenApiTH.Schema
+    OpenApiTH.ServerAddress
     OpenApiTH.Spec
     OpenApiTH.SpecPath
 

@@ -30,10 +30,11 @@ server () = pure ["AJ", "Pat"]
 
 spec ∷ Spec
 spec = it @(IO ()) "" do
-  makeRequestBs @GetUsers "http://api.example.com/v1" ()
+  httpRequest @GetUsers "http://api.example.com/v1" ()
     `shouldBe` fold
-      [ "GET /v1/users\r\n"
+      [ "GET /v1/users HTTP/1.1\r\n"
       , "Host: api.example.com\r\n"
       , "Accept: application/json\r\n"
+      , "User-Agent: haskell-openapi3-th\r\n"
       , "\r\n"
       ]

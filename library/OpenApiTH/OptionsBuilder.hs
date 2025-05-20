@@ -11,7 +11,7 @@ import OpenApiTH.Options (OperationOptions, Options (..), ToOptions (..), defaul
 import OpenApiTH.Options qualified as Opt
 
 newtype OptionsBuilder = OptionsBuilder (Options → Options)
-  deriving (Semigroup, Monoid) via Endo Options
+  deriving (Semigroup, Monoid) via Dual (Endo Options)
 
 instance ToOptions OptionsBuilder where
   toOptions (OptionsBuilder f) = f defaultOptions
