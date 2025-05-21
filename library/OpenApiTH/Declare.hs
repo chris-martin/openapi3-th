@@ -25,7 +25,7 @@ declare opt =
         tySynInstD $
           tySynEqn
             Nothing
-            (appT (conT ''Request) (conT name))
+            (appT (conT ''OperationRequest) (conT name))
             (conT ''())
  where
   Options {specFile, operations} = toOptions opt

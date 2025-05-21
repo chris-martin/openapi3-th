@@ -1,4 +1,4 @@
-ghc-options := "-O0 -Werror"
+ghc-options := "-O0 -fdefer-typed-holes"
 
 # Things that are quick
 auto: format-cabal format-haskell

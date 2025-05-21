@@ -2,8 +2,8 @@ module OpenApiTH.Operation where
 
 import Essentials
 
-type family Request op ∷ Type
+type family OperationRequest op ∷ Type
 
-type family Response op ∷ Type
+type family OperationResponse op ∷ Type
 
-type Server op m = Request op → m (Response op)
+type OperationServer op m = OperationRequest op → m (OperationResponse op)

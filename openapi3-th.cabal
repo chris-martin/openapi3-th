@@ -17,6 +17,7 @@ common base
     OverloadedLists
     OverloadedRecordDot
     OverloadedStrings
+    PartialTypeSignatures
     TemplateHaskell
     TypeFamilies
     UnicodeSyntax
@@ -29,12 +30,15 @@ library
     , bytestring
     , containers
     , filepath
+    , http-conduit
     , iri
     , quaalude
     , template-haskell
     , text
     , transformers
     , vector
+    , wai
+    , warp
     , yaml
     , yield
 
@@ -45,17 +49,18 @@ library
     OpenApiTH
     OpenApiTH.DataType
     OpenApiTH.Declare
-    OpenApiTH.HttpRequest
     OpenApiTH.Operation
     OpenApiTH.Options
     OpenApiTH.OptionsBuilder
     OpenApiTH.ReadSpecFile
+    OpenApiTH.Request
     OpenApiTH.RequestMessage
     OpenApiTH.ResolveSpecPath
     OpenApiTH.Schema
     OpenApiTH.ServerAddress
     OpenApiTH.Spec
     OpenApiTH.SpecPath
+    OpenApiTH.Wai
 
 test-suite test
   import:         base

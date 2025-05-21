@@ -8,7 +8,8 @@
       let nixpkgs = inputs.nixpkgs.legacyPackages.${system};
       in {
         devShells.default = nixpkgs.mkShell {
-          buildInputs = [
+          buildInputs = [ nixpkgs.zlib ];
+          nativeBuildInputs = [
             nixpkgs.ghc
             nixpkgs.haskell-language-server
             (nixpkgs.haskell.lib.justStaticExecutables

@@ -25,12 +25,15 @@ type instance Response GetUsers = Vector Text
 
 -}
 
-server ∷ OATH.Server GetUsers IO
+server ∷ OATH.OperationServer GetUsers IO
 server () = pure ["AJ", "Pat"]
+
+request :: OATH.OperationRequest GetUsers
+request = ()
 
 spec ∷ Spec
 spec = it @(IO ()) "" do
-  httpRequest @GetUsers "http://api.example.com/v1" ()
+  operationRequestBs @GetUsers "http://api.example.com/v1" request
     `shouldBe` fold
       [ "GET /v1/users HTTP/1.1\r\n"
       , "Host: api.example.com\r\n"
@@ -38,3 +41,5 @@ spec = it @(IO ()) "" do
       , "User-Agent: haskell-openapi3-th\r\n"
       , "\r\n"
       ]
+  withApplication (operationWaiApplication @GetUsers) \port ->
+    _
