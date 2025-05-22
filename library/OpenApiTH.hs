@@ -15,6 +15,7 @@ module OpenApiTH (
   ServerAddress (..),
   localhost,
   setServerPort,
+  serverAddressQQ,
 ) where
 
 import OpenApiTH.Declare

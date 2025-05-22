@@ -18,23 +18,13 @@ declare $
   specFile "examples/OpenApiGuide/BasicStructure/openapi.yaml"
     <> operation ("get /users" & setOperationName "GetUsers")
 
-{- Generates:
-
-data GetUsers
-
-type instance Request GetUsers = ()
-
-type instance Response GetUsers = Vector Text
-
--}
-
 server ∷ OperationServer GetUsers IO
 server () = pure ["AJ", "Pat"]
 
 spec ∷ Spec
 spec = do
   it @(IO ()) "" do
-    operationRequestBs @GetUsers "http://api.example.com/v1" ()
+    operationRequestBs @GetUsers [serverAddressQQ|http://api.example.com/v1|] ()
       `shouldBe` fold
         [ "GET /v1/users HTTP/1.1\r\n"
         , "Host: api.example.com\r\n"
@@ -43,7 +33,9 @@ spec = do
         , "\r\n"
         ]
   it @(IO ()) "" do
-    testWithApplication (pure $ operationWaiApplication @GetUsers) \port → do
+    testWithApplication (pure $ operationWaiApplication @GetUsers server) \port → do
       let serverAddress = localhost & setServerPort (fromIntegral port)
-      response ← (httpClientOperationResponse =<<) $ httpLBS $ operationRequestHttpClient serverAddress ()
+          httpClientRequest = operationRequestHttpClient @GetUsers serverAddress ()
+      httpClientResponse ← httpLBS httpClientRequest
+      response ← httpClientOperationResponse @GetUsers httpClientResponse
       response `shouldBe` ["AJ", "Pat"]

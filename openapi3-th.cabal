@@ -18,6 +18,7 @@ common base
     OverloadedRecordDot
     OverloadedStrings
     PartialTypeSignatures
+    QuasiQuotes
     TemplateHaskell
     TypeFamilies
     UnicodeSyntax

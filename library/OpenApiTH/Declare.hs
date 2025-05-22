@@ -6,8 +6,10 @@ import Control.Monad.Fail
 import Control.Monad.Trans.Class
 import Control.Monad.Yield
 import Data.Foldable
+import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Tuple
+import Data.Vector (Vector)
 import Language.Haskell.TH
 import Language.Haskell.TH.Lib
 import Language.Haskell.TH.Syntax qualified as TH
@@ -27,6 +29,12 @@ declare opt =
             Nothing
             (appT (conT ''OperationRequest) (conT name))
             (conT ''())
+      yieldM $
+        tySynInstD $
+          tySynEqn
+            Nothing
+            (appT (conT ''OperationResponse) (conT name))
+            (appT (conT ''Vector) (conT ''Text))
  where
   Options {specFile, operations} = toOptions opt
 
