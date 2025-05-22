@@ -7,13 +7,16 @@ import Test.Hspec
 import Data.Foldable
 import Data.Text (Text)
 import Language.Haskell.TH qualified as TH
+import Network.HTTP.Simple
+import Network.Wai.Handler.Warp
 import System.IO (IO)
+import Prelude (fromIntegral)
 
-import OpenApiTH qualified as OATH
+import OpenApiTH
 
-OATH.declare $
-  OATH.specFile "examples/OpenApiGuide/BasicStructure/openapi.yaml"
-    <> OATH.operation ("get /users" & OATH.setOperationName "GetUsers")
+declare $
+  specFile "examples/OpenApiGuide/BasicStructure/openapi.yaml"
+    <> operation ("get /users" & setOperationName "GetUsers")
 
 {- Generates:
 
@@ -25,21 +28,22 @@ type instance Response GetUsers = Vector Text
 
 -}
 
-server ∷ OATH.OperationServer GetUsers IO
+server ∷ OperationServer GetUsers IO
 server () = pure ["AJ", "Pat"]
 
-request :: OATH.OperationRequest GetUsers
-request = ()
-
 spec ∷ Spec
-spec = it @(IO ()) "" do
-  operationRequestBs @GetUsers "http://api.example.com/v1" request
-    `shouldBe` fold
-      [ "GET /v1/users HTTP/1.1\r\n"
-      , "Host: api.example.com\r\n"
-      , "Accept: application/json\r\n"
-      , "User-Agent: haskell-openapi3-th\r\n"
-      , "\r\n"
-      ]
-  withApplication (operationWaiApplication @GetUsers) \port ->
-    _
+spec = do
+  it @(IO ()) "" do
+    operationRequestBs @GetUsers "http://api.example.com/v1" ()
+      `shouldBe` fold
+        [ "GET /v1/users HTTP/1.1\r\n"
+        , "Host: api.example.com\r\n"
+        , "Accept: application/json\r\n"
+        , "User-Agent: haskell-openapi3-th\r\n"
+        , "\r\n"
+        ]
+  it @(IO ()) "" do
+    testWithApplication (pure $ operationWaiApplication @GetUsers) \port → do
+      let serverAddress = localhost & setServerPort (fromIntegral port)
+      response ← (httpClientOperationResponse =<<) $ httpLBS $ operationRequestHttpClient serverAddress ()
+      response `shouldBe` ["AJ", "Pat"]

@@ -12,8 +12,8 @@ import OpenApiTH.Operation
 import OpenApiTH.RequestMessage
 import OpenApiTH.ServerAddress
 
-operationRequestBs ∷ ∀ op. OperationRequest op → ServerAddress → LazyByteString
+operationRequestBs ∷ ∀ op. ServerAddress → OperationRequest op → LazyByteString
 operationRequestBs r s = _
 
-operationRequestHttpClient ∷ ∀ op. OperationRequest op → ServerAddress → Request
+operationRequestHttpClient ∷ ∀ op. ServerAddress → OperationRequest op → Request
 operationRequestHttpClient = _
