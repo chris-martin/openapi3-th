@@ -1,11 +1,11 @@
-module OpenApiTH.RequestMessage where
+module OpenApiTH.MessageBuilder where
 
 import Essentials
 
 import Data.ByteString (ByteString)
 import Iri.Data (Authority, Fragment, Iri, Path, Query, Scheme)
 
-data RequestMessage = RequestMessge
+data RequestBuilder = RequestBuilder
   { method ∷ ByteString
   , path ∷ Path
   , query ∷ Query
@@ -13,3 +13,5 @@ data RequestMessage = RequestMessge
   , userAgent ∷ ByteString
   , body ∷ ByteString
   }
+
+data ResponseBuilder = ResponseBuilder

@@ -5,6 +5,7 @@ import Essentials
 import Test.Hspec
 
 import Data.Foldable
+import Data.List (map)
 import Data.Text (Text)
 import Language.Haskell.TH qualified as TH
 import Network.HTTP.Simple
@@ -23,19 +24,14 @@ server () = pure ["AJ", "Pat"]
 
 spec ∷ Spec
 spec = do
-  it @(IO ()) "" do
+  it @Expectation "" do
     operationRequestBs @GetUsers [serverAddressQQ|http://api.example.com/v1|] ()
-      `shouldBe` fold
-        [ "GET /v1/users HTTP/1.1\r\n"
-        , "Host: api.example.com\r\n"
-        , "Accept: application/json\r\n"
-        , "User-Agent: haskell-openapi3-th\r\n"
-        , "\r\n"
+      `shouldBe` foldMap @[] (<> "\r\n")
+        [ "GET /v1/users HTTP/1.1"
+        , "Host: api.example.com"
+        , "Accept: application/json"
+        , "User-Agent: haskell-openapi3-th"
+        , ""
         ]
-  it @(IO ()) "" do
-    testWithApplication (pure $ operationWaiApplication @GetUsers server) \port → do
-      let serverAddress = localhost & setServerPort (fromIntegral port)
-          httpClientRequest = operationRequestHttpClient @GetUsers serverAddress ()
-      httpClientResponse ← httpLBS httpClientRequest
-      response ← httpClientOperationResponse @GetUsers httpClientResponse
-      response `shouldBe` ["AJ", "Pat"]
+  it @Expectation "" do
+    assertHttpClientExchange @GetUsers () server

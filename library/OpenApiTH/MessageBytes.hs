@@ -1,4 +1,5 @@
-module OpenApiTH.Response where
+-- | Working with HTTP message encoding
+module OpenApiTH.MessageBytes where
 
 import Essentials
 
@@ -10,8 +11,10 @@ import Data.ByteString.Lazy (LazyByteString)
 import Network.HTTP.Simple
 
 import OpenApiTH.Operation
-import OpenApiTH.RequestMessage
 import OpenApiTH.ServerAddress
+
+operationRequestBs ∷ ∀ op. ServerAddress → OperationRequest op → LazyByteString
+operationRequestBs r s = _
 
 bsOperationResponse
   ∷ ∀ op m
@@ -19,10 +22,3 @@ bsOperationResponse
   ⇒ LazyByteString
   → m (OperationResponse op)
 bsOperationResponse bs = _
-
-httpClientOperationResponse
-  ∷ ∀ op m
-   . MonadFail m
-  ⇒ Response LazyByteString
-  → m (OperationResponse op)
-httpClientOperationResponse = _

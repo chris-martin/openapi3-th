@@ -31,8 +31,10 @@ library
     , bytestring
     , containers
     , filepath
+    , hspec
     , http-conduit
     , iri
+    , monad-validate
     , quaalude
     , template-haskell
     , text
@@ -50,14 +52,14 @@ library
     OpenApiTH
     OpenApiTH.DataType
     OpenApiTH.Declare
+    OpenApiTH.HttpClient
+    OpenApiTH.MessageBuilder
+    OpenApiTH.MessageBytes
     OpenApiTH.Operation
     OpenApiTH.Options
     OpenApiTH.OptionsBuilder
     OpenApiTH.ReadSpecFile
-    OpenApiTH.Request
-    OpenApiTH.RequestMessage
     OpenApiTH.ResolveSpecPath
-    OpenApiTH.Response
     OpenApiTH.Schema
     OpenApiTH.ServerAddress
     OpenApiTH.Spec

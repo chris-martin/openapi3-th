@@ -11,19 +11,19 @@ module OpenApiTH (
   OperationRequest,
   OperationResponse,
   OperationServer,
-  RequestMessage (..),
   ServerAddress (..),
   localhost,
   setServerPort,
   serverAddressQQ,
+  assertHttpClientExchange,
 ) where
 
 import OpenApiTH.Declare
+import OpenApiTH.HttpClient
+import OpenApiTH.MessageBuilder
+import OpenApiTH.MessageBytes
 import OpenApiTH.Operation
 import OpenApiTH.Options
 import OpenApiTH.OptionsBuilder
-import OpenApiTH.Request
-import OpenApiTH.RequestMessage
-import OpenApiTH.Response
 import OpenApiTH.ServerAddress
 import OpenApiTH.Wai
