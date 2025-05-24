@@ -29,10 +29,12 @@ library
     , aeson
     , base
     , bytestring
+    , conduit
     , containers
     , filepath
     , hspec
     , http-conduit
+    , http-types
     , iri
     , monad-validate
     , quaalude
@@ -64,6 +66,7 @@ library
     OpenApiTH.ServerAddress
     OpenApiTH.Spec
     OpenApiTH.SpecPath
+    OpenApiTH.Testing
     OpenApiTH.Wai
 
 test-suite test

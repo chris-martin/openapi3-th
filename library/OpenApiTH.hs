@@ -5,7 +5,7 @@ module OpenApiTH (
   setOperationName,
   operationWaiApplication,
   operationRequestBs,
-  operationRequestHttpClient,
+  operationRequestToHttpClient,
   bsOperationResponse,
   httpClientOperationResponse,
   OperationRequest,
@@ -15,7 +15,7 @@ module OpenApiTH (
   localhost,
   setServerPort,
   serverAddressQQ,
-  assertHttpClientExchange,
+  assertHttpClientWarpExchange,
 ) where
 
 import OpenApiTH.Declare
@@ -26,4 +26,5 @@ import OpenApiTH.Operation
 import OpenApiTH.Options
 import OpenApiTH.OptionsBuilder
 import OpenApiTH.ServerAddress
+import OpenApiTH.Testing
 import OpenApiTH.Wai
