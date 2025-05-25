@@ -20,7 +20,6 @@ module OpenApiTH (
 
 import OpenApiTH.Declare
 import OpenApiTH.HttpClient
-import OpenApiTH.MessageBuilder
 import OpenApiTH.MessageBytes
 import OpenApiTH.Operation
 import OpenApiTH.Options
