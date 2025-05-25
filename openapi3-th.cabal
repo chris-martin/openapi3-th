@@ -33,10 +33,12 @@ library
     , containers
     , filepath
     , hspec
+    , http-client
     , http-conduit
     , http-types
     , iri
     , monad-validate
+    , network-uri
     , quaalude
     , template-haskell
     , text

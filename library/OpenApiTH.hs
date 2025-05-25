@@ -7,7 +7,7 @@ module OpenApiTH (
   operationRequestBs,
   operationRequestToHttpClient,
   bsOperationResponse,
-  httpClientOperationResponse,
+  httpClientToOperationResponse,
   OperationRequest,
   OperationResponse,
   OperationServer,

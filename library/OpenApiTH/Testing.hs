@@ -31,9 +31,7 @@ assertHttpClientWarpExchange request server = do
   expectedResponse ← server request
   testWithApplication (pure $ operationWaiApplication @op server) \port → do
     let serverAddress = localhost & setServerPort (fromIntegral port)
-    httpClientRequest ← operationRequestToHttpClient @op request
-    httpClientResponse ←
-      httpLBS $
-        setHttpClientRequestServerAddress serverAddress httpClientRequest
-    response ← httpClientOperationResponse @op httpClientResponse
-    response `shouldBe` expectedResponse
+    httpClientRequest ← setHttpClientRequestServerAddress serverAddress <$> operationRequestToHttpClient @op request
+    withResponse httpClientRequest $ \httpClientResponse → do
+      response ← httpClientToOperationResponse @op httpClientResponse
+      response `shouldBe` expectedResponse
