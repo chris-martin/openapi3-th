@@ -5,6 +5,7 @@ import Essentials
 
 import Conduit
 import Control.Monad.Fail
+import Control.Monad.Validate (refute, runValidateT)
 import Control.Monad.Yield
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
@@ -13,8 +14,10 @@ import Data.ByteString.Builder (Builder)
 import Data.ByteString.Builder qualified as BSB
 import Data.ByteString.Builder qualified as Builder
 import Data.ByteString.Lazy (LazyByteString)
+import Data.Either (either)
 import Data.Foldable (concat, fold)
 import Data.List qualified as List
+import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
 import Data.Vector qualified as V
@@ -23,46 +26,45 @@ import Network.HTTP.Client qualified as HttpClient
 import Network.HTTP.Simple
 import Network.URI qualified as URI
 import Network.Wai.Handler.Warp
-import OpenApiTH.OpenApi.ServerUrl
+import OpenApiTH.OpenApi.Server
 import OpenApiTH.Operation.Operation
 import OpenApiTH.Operation.Wai
 import System.IO (IO)
 import Test.Hspec
+import Text.Show (show)
 import Prelude (fromIntegral)
 
-class HttpClientOperation op where
-  operationRequestToHttpClient ∷ OperationRequest op → IO Request
-  httpClientToOperationResponse
-    ∷ Response (ConduitT () ByteString IO ()) → IO (OperationResponse op)
+buildHttpClientRequest ∷ RequestBuilder → IO HttpClient.Request
+buildHttpClientRequest rb = do
+  result ← runValidateT do
+    server ← maybe (refute ["No server"]) pure rb.server
+    pure $
+      HttpClient.defaultRequest
+        & setRequestMethod rb.method
+        & setRequestSecure (let Security x = server.security in x)
+        & setRequestHost
+          ( BSL.toStrict $
+              BSB.toLazyByteString $
+                case server.host of
+                  NamedHost x → renderRegName x
+          )
+        & setRequestPort
+          ( case server.port of
+              PresentPort x → fromIntegral x
+              MissingPort → case server.security of
+                Security False → 80
+                Security True → 443
+          )
+        & setRequestPath
+          ( BSL.toStrict $
+              BSB.toLazyByteString $
+                renderPath rb.path
+          )
 
-setHttpClientRequestServerUrl ∷ ∀ op. ServerUrl → Request → Request
-setHttpClientRequestServerUrl ServerUrl {security, host, port, path} =
-  setSecurity . setHost . setPort . setPath
- where
-  setSecurity = setRequestSecure (let Security x = security in x)
-  setHost r =
-    r
-      { HttpClient.host =
-          BSL.toStrict $
-            BSB.toLazyByteString $
-              case host of
-                NamedHost x → renderRegName x
-      }
-  setPort r =
-    r
-      { HttpClient.port = case port of
-          PresentPort x → fromIntegral x
-          MissingPort → case security of
-            Security False → 80
-            Security True → 443
-      }
-  setPath r =
-    r
-      { HttpClient.path =
-          BSL.toStrict $
-            BSB.toLazyByteString $
-              renderPath path <> BSB.byteString (HttpClient.path r)
-      }
+  either (fail . show @[Text]) pure result
+
+readHttpClientResponse ∷ HttpClient.Response (ConduitT () ByteString IO ()) → IO ResponseReader
+readHttpClientResponse rr = _
 
 renderPath ∷ Path → BSB.Builder
 renderPath =

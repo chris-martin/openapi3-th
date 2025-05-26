@@ -4,9 +4,7 @@ module OpenApiTH (
   operation,
   setOperationName,
   operationWaiApplication,
-  operationRequestBs,
   operationRequestToHttpClient,
-  bsOperationResponse,
   httpClientToOperationResponse,
   OperationRequest,
   OperationResponse,
@@ -21,9 +19,8 @@ module OpenApiTH (
 import OpenApiTH.Declare.Declare
 import OpenApiTH.Declare.Options
 import OpenApiTH.Declare.OptionsBuilder
-import OpenApiTH.OpenApi.ServerUrl
+import OpenApiTH.OpenApi.Server
 import OpenApiTH.Operation.HttpClient
-import OpenApiTH.Operation.MessageBytes
 import OpenApiTH.Operation.Operation
 import OpenApiTH.Operation.Testing
 import OpenApiTH.Operation.Wai

@@ -13,7 +13,7 @@ import System.IO (IO)
 import Test.Hspec
 import Prelude (fromIntegral)
 
-import OpenApiTH.OpenApi.ServerUrl
+import OpenApiTH.OpenApi.Server
 import OpenApiTH.Operation.HttpClient
 import OpenApiTH.Operation.Operation
 import OpenApiTH.Operation.Wai

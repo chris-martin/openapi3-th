@@ -39,18 +39,17 @@ declare opt =
 
           type instance OperationResponse $(conT name) = Vector Text
 
-          instance WaiOperation $(conT name) where
-            waiToOperationRequest _ = pure ()
-            operationResponseToWai xs =
+          instance Operation $(conT name) where
+
+            buildOperationRequest _ = mempty
+            buildOperationResponse xs =
               pure $
                 Wai.responseLBS
                   Http.ok200
                   [(Http.hContentType, "application/json")]
                   (JSON.encode xs)
-
-          instance HttpClientOperation $(conT name) where
-            operationRequestToHttpClient () = pure HttpClient.defaultRequest
-            httpClientToOperationResponse httpClientResponse = do
+            readOperationRequest _ = pure ()
+            readOperationResponse rr = do
               let headers = HttpClient.responseHeaders httpClientResponse
                   contentTypeMaybe = List.lookup Http.hContentType headers
                   statusCode = Http.statusCode $ HttpClient.responseStatus httpClientResponse

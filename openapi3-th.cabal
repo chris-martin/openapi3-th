@@ -61,11 +61,10 @@ library
     OpenApiTH.OpenApi.ReadSpecFile
     OpenApiTH.OpenApi.ResolveSpecPath
     OpenApiTH.OpenApi.Schema
-    OpenApiTH.OpenApi.ServerUrl
+    OpenApiTH.OpenApi.Server
     OpenApiTH.OpenApi.Spec
     OpenApiTH.OpenApi.SpecPath
     OpenApiTH.Operation.HttpClient
-    OpenApiTH.Operation.MessageBytes
     OpenApiTH.Operation.Operation
     OpenApiTH.Operation.Testing
     OpenApiTH.Operation.Wai

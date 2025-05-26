@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wno-missing-fields #-}
 
-module OpenApiTH.OpenApi.ServerUrl where
+module OpenApiTH.OpenApi.Server where
 
 import Essentials
 
@@ -16,6 +16,12 @@ import Iri.Data
 import Iri.Parsing.Text qualified as P
 import Language.Haskell.TH.Quote
 import Language.Haskell.TH.Syntax
+
+data Server = Server
+  { security ∷ Security
+  , host ∷ Host
+  , port ∷ Port
+  }
 
 data ServerUrl = ServerUrl
   { security ∷ Security

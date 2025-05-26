@@ -11,7 +11,7 @@ import Language.Haskell.TH qualified as TH
 import Network.HTTP.Simple
 import Network.Wai.Handler.Warp
 import System.IO (IO)
-import Prelude (fromIntegral)
+import Prelude (fromIntegral, show)
 
 import OpenApiTH
 
@@ -25,14 +25,30 @@ server () = pure ["AJ", "Pat"]
 spec ∷ Spec
 spec = do
   it @Expectation "" do
-    operationRequestBs @GetUsers [serverUrlQQ|http://api.example.com/v1|] ()
-      `shouldBe` foldMap @[]
-        (<> "\r\n")
-        [ "GET /v1/users HTTP/1.1"
-        , "Host: api.example.com"
-        , "Accept: application/json"
-        , "User-Agent: haskell-openapi3-th"
-        , ""
-        ]
+    request ← operationRequestToHttpClient @GetUsers ()
+    show request
+      `shouldBe` "Request {\n\
+                 \  host                 = \"localhost\"\n\
+                 \  port                 = 80\n\
+                 \  secure               = False\n\
+                 \  requestHeaders       = []\n\
+                 \  path                 = \"/users\"\n\
+                 \  queryString          = \"\"\n\
+                 \  method               = \"GET\"\n\
+                 \  proxy                = Nothing\n\
+                 \  rawBody              = False\n\
+                 \  redirectCount        = 10\n\
+                 \  responseTimeout      = ResponseTimeoutDefault\n\
+                 \  requestVersion       = HTTP/1.1\n\
+                 \  proxySecureMode      = ProxySecureWithConnect\n\
+                 \}\n"
+  -- foldMap @[]
+  --     (<> "\r\n")
+  --     [ "GET /v1/users HTTP/1.1"
+  --     , "Host: api.example.com"
+  --     , "Accept: application/json"
+  --     , "User-Agent: haskell-openapi3-th"
+  --     , ""
+  --     ]
   it @Expectation "" do
     assertHttpClientWarpExchange @GetUsers () server
