@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -fno-warn-missing-methods #-}
 
-module OpenApiTH.SpecPath where
+module OpenApiTH.OpenApi.SpecPath where
 
 import Essentials
 

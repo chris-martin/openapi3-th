@@ -1,7 +1,7 @@
 -- |
 --
 -- https://swagger.io/specification/#data-types
-module OpenApiTH.DataType where
+module OpenApiTH.OpenApi.DataType where
 
 import Essentials
 

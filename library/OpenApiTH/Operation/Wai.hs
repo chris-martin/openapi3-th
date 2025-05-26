@@ -1,11 +1,11 @@
-module OpenApiTH.Wai where
+module OpenApiTH.Operation.Wai where
 
 import Essentials
 
 import Network.Wai
 import System.IO (IO)
 
-import OpenApiTH.Operation
+import OpenApiTH.Operation.Operation
 
 class WaiOperation op where
   waiToOperationRequest ∷ Request → IO (OperationRequest op)

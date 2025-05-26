@@ -1,4 +1,4 @@
-module OpenApiTH.Schema where
+module OpenApiTH.OpenApi.Schema where
 
 import Essentials
 
@@ -9,7 +9,7 @@ import Data.String
 import Language.Haskell.TH
 
 import Language.Haskell.TH qualified as TH
-import OpenApiTH.DataType
+import OpenApiTH.OpenApi.DataType
 
 data Schema = Schema {value ∷ JSON.Value}
 

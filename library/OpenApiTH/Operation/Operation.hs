@@ -1,4 +1,4 @@
-module OpenApiTH.Operation where
+module OpenApiTH.Operation.Operation where
 
 import Essentials
 

@@ -1,5 +1,5 @@
 -- | Integration with the @http-client@ library
-module OpenApiTH.HttpClient where
+module OpenApiTH.Operation.HttpClient where
 
 import Essentials
 
@@ -23,9 +23,9 @@ import Network.HTTP.Client qualified as HttpClient
 import Network.HTTP.Simple
 import Network.URI qualified as URI
 import Network.Wai.Handler.Warp
-import OpenApiTH.Operation
-import OpenApiTH.ServerAddress
-import OpenApiTH.Wai
+import OpenApiTH.OpenApi.ServerUrl
+import OpenApiTH.Operation.Operation
+import OpenApiTH.Operation.Wai
 import System.IO (IO)
 import Test.Hspec
 import Prelude (fromIntegral)
@@ -35,8 +35,8 @@ class HttpClientOperation op where
   httpClientToOperationResponse
     ∷ Response (ConduitT () ByteString IO ()) → IO (OperationResponse op)
 
-setHttpClientRequestServerAddress ∷ ∀ op. ServerAddress → Request → Request
-setHttpClientRequestServerAddress ServerAddress {security, host, port, path} =
+setHttpClientRequestServerUrl ∷ ∀ op. ServerUrl → Request → Request
+setHttpClientRequestServerUrl ServerUrl {security, host, port, path} =
   setSecurity . setHost . setPort . setPath
  where
   setSecurity = setRequestSecure (let Security x = security in x)

@@ -54,21 +54,21 @@ library
   -- cabal-fmt: expand library
   exposed-modules:
     OpenApiTH
-    OpenApiTH.DataType
-    OpenApiTH.Declare
-    OpenApiTH.HttpClient
-    OpenApiTH.MessageBytes
-    OpenApiTH.Operation
-    OpenApiTH.Options
-    OpenApiTH.OptionsBuilder
-    OpenApiTH.ReadSpecFile
-    OpenApiTH.ResolveSpecPath
-    OpenApiTH.Schema
-    OpenApiTH.ServerAddress
-    OpenApiTH.Spec
-    OpenApiTH.SpecPath
-    OpenApiTH.Testing
-    OpenApiTH.Wai
+    OpenApiTH.Declare.Declare
+    OpenApiTH.Declare.Options
+    OpenApiTH.Declare.OptionsBuilder
+    OpenApiTH.OpenApi.DataType
+    OpenApiTH.OpenApi.ReadSpecFile
+    OpenApiTH.OpenApi.ResolveSpecPath
+    OpenApiTH.OpenApi.Schema
+    OpenApiTH.OpenApi.ServerUrl
+    OpenApiTH.OpenApi.Spec
+    OpenApiTH.OpenApi.SpecPath
+    OpenApiTH.Operation.HttpClient
+    OpenApiTH.Operation.MessageBytes
+    OpenApiTH.Operation.Operation
+    OpenApiTH.Operation.Testing
+    OpenApiTH.Operation.Wai
 
 test-suite test
   import:         base

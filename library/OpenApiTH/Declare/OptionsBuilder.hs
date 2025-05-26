@@ -1,4 +1,4 @@
-module OpenApiTH.OptionsBuilder where
+module OpenApiTH.Declare.OptionsBuilder where
 
 import Essentials
 
@@ -7,8 +7,8 @@ import Data.Sequence (Seq (..))
 import Data.Text (Text)
 import System.IO (FilePath)
 
-import OpenApiTH.Options (OperationOptions, Options (..), ToOptions (..), defaultOptions)
-import OpenApiTH.Options qualified as Opt
+import OpenApiTH.Declare.Options (OperationOptions, Options (..), ToOptions (..), defaultOptions)
+import OpenApiTH.Declare.Options qualified as Opt
 
 newtype OptionsBuilder = OptionsBuilder (Options → Options)
   deriving (Semigroup, Monoid) via Dual (Endo Options)

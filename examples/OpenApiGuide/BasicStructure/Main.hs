@@ -25,7 +25,7 @@ server () = pure ["AJ", "Pat"]
 spec ∷ Spec
 spec = do
   it @Expectation "" do
-    operationRequestBs @GetUsers [serverAddressQQ|http://api.example.com/v1|] ()
+    operationRequestBs @GetUsers [serverUrlQQ|http://api.example.com/v1|] ()
       `shouldBe` foldMap @[]
         (<> "\r\n")
         [ "GET /v1/users HTTP/1.1"

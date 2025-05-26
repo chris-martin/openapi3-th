@@ -1,4 +1,4 @@
-module OpenApiTH.ResolveSpecPath where
+module OpenApiTH.OpenApi.ResolveSpecPath where
 
 import Essentials
 
@@ -8,8 +8,8 @@ import Data.Aeson.KeyMap qualified as KeyMap
 import Data.Vector qualified as Vector
 import Prelude (fromIntegral)
 
-import OpenApiTH.Spec
-import OpenApiTH.SpecPath
+import OpenApiTH.OpenApi.Spec
+import OpenApiTH.OpenApi.SpecPath
 
 resolveSpecPath ∷ MonadFail m ⇒ Spec → SpecPath → m JSON.Value
 resolveSpecPath spec specPath =

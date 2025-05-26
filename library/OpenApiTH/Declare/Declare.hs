@@ -1,4 +1,4 @@
-module OpenApiTH.Declare where
+module OpenApiTH.Declare.Declare where
 
 import Essentials
 
@@ -22,10 +22,10 @@ import Network.HTTP.Types.Header qualified as Http
 import Network.HTTP.Types.Status qualified as Http
 import Network.Wai qualified as Wai
 
-import OpenApiTH.HttpClient
-import OpenApiTH.Operation
-import OpenApiTH.Options
-import OpenApiTH.Wai
+import OpenApiTH.Declare.Options
+import OpenApiTH.Operation.HttpClient
+import OpenApiTH.Operation.Operation
+import OpenApiTH.Operation.Wai
 
 declare ∷ (ToOptions opt, MonadFail m, Quote m) ⇒ opt → m [Dec]
 declare opt =

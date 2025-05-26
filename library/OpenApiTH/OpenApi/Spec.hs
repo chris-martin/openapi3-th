@@ -1,4 +1,4 @@
-module OpenApiTH.Spec where
+module OpenApiTH.OpenApi.Spec where
 
 import Essentials
 

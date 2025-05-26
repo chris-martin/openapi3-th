@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wno-missing-fields #-}
 
-module OpenApiTH.ServerAddress where
+module OpenApiTH.OpenApi.ServerUrl where
 
 import Essentials
 
@@ -17,7 +17,7 @@ import Iri.Parsing.Text qualified as P
 import Language.Haskell.TH.Quote
 import Language.Haskell.TH.Syntax
 
-data ServerAddress = ServerAddress
+data ServerUrl = ServerUrl
   { security ∷ Security
   , host ∷ Host
   , port ∷ Port
@@ -25,8 +25,8 @@ data ServerAddress = ServerAddress
   }
   deriving stock (Lift)
 
-serverAddressQQ ∷ QuasiQuoter
-serverAddressQQ =
+serverUrlQQ ∷ QuasiQuoter
+serverUrlQQ =
   QuasiQuoter
     { quoteExp = \s → case P.httpIri (Text.pack s) of
         Left e → fail $ Text.unpack e
@@ -34,18 +34,18 @@ serverAddressQQ =
           result ← runValidateT do
             unless (query == Query "") $ dispute ["Query must be empty"]
             unless (fragment == Fragment "") $ dispute ["Fragment must be empty"]
-            pure ServerAddress {security, host, port, path}
+            pure ServerUrl {security, host, port, path}
           either (fail . Text.unpack . Text.intercalate "\n") lift result
     }
 
-localhost ∷ ServerAddress
+localhost ∷ ServerUrl
 localhost =
-  ServerAddress
+  ServerUrl
     { security = Security False
     , host = NamedHost $ RegName [DomainLabel "localhost"]
     , port = MissingPort
     , path = Path []
     }
 
-setServerPort ∷ Word16 → ServerAddress → ServerAddress
+setServerPort ∷ Word16 → ServerUrl → ServerUrl
 setServerPort port x = x {port = PresentPort port}

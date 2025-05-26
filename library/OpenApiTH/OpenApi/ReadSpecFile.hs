@@ -1,4 +1,4 @@
-module OpenApiTH.ReadSpecFile where
+module OpenApiTH.OpenApi.ReadSpecFile where
 
 import Essentials
 
@@ -14,7 +14,7 @@ import Data.Yaml qualified as YAML
 import System.FilePath qualified as FilePath
 import System.IO
 
-import OpenApiTH.Spec
+import OpenApiTH.OpenApi.Spec
 
 readSpecFile ∷ FilePath → IO Spec
 readSpecFile file = do

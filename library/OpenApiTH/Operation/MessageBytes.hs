@@ -1,5 +1,5 @@
 -- | Working with HTTP message encoding
-module OpenApiTH.MessageBytes where
+module OpenApiTH.Operation.MessageBytes where
 
 import Essentials
 
@@ -11,8 +11,8 @@ import Data.ByteString.Builder qualified as Builder
 import Data.ByteString.Lazy (LazyByteString)
 import Iri.Data (Authority, Fragment, Iri, Path, Query, Scheme)
 
-import OpenApiTH.Operation
-import OpenApiTH.ServerAddress
+import OpenApiTH.OpenApi.ServerUrl
+import OpenApiTH.Operation.Operation
 
 data RequestBuilder = RequestBuilder
   { method ∷ ByteString
@@ -25,7 +25,7 @@ data RequestBuilder = RequestBuilder
 
 data ResponseBuilder = ResponseBuilder
 
-operationRequestBs ∷ ∀ op. ServerAddress → OperationRequest op → LazyByteString
+operationRequestBs ∷ ∀ op. ServerUrl → OperationRequest op → LazyByteString
 operationRequestBs r s = _
 
 bsOperationResponse

@@ -1,4 +1,4 @@
-module OpenApiTH.Testing where
+module OpenApiTH.Operation.Testing where
 
 import Essentials
 
@@ -13,10 +13,10 @@ import System.IO (IO)
 import Test.Hspec
 import Prelude (fromIntegral)
 
-import OpenApiTH.HttpClient
-import OpenApiTH.Operation
-import OpenApiTH.ServerAddress
-import OpenApiTH.Wai
+import OpenApiTH.OpenApi.ServerUrl
+import OpenApiTH.Operation.HttpClient
+import OpenApiTH.Operation.Operation
+import OpenApiTH.Operation.Wai
 
 -- | Test making an HTTP request using http-client as the client
 --   and Warp as the server
@@ -30,8 +30,8 @@ assertHttpClientWarpExchange
 assertHttpClientWarpExchange request server = do
   expectedResponse ← server request
   testWithApplication (pure $ operationWaiApplication @op server) \port → do
-    let serverAddress = localhost & setServerPort (fromIntegral port)
-    httpClientRequest ← setHttpClientRequestServerAddress serverAddress <$> operationRequestToHttpClient @op request
+    let serverUrl = localhost & setServerPort (fromIntegral port)
+    httpClientRequest ← setHttpClientRequestServerUrl serverUrl <$> operationRequestToHttpClient @op request
     withResponse httpClientRequest $ \httpClientResponse → do
       response ← httpClientToOperationResponse @op httpClientResponse
       response `shouldBe` expectedResponse

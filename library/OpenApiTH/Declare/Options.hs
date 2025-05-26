@@ -1,4 +1,4 @@
-module OpenApiTH.Options where
+module OpenApiTH.Declare.Options where
 
 import Essentials
 
