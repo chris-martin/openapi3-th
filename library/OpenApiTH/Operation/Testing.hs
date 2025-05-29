@@ -9,20 +9,23 @@ import Data.ByteString.Builder qualified as Builder
 import Data.ByteString.Lazy (LazyByteString)
 import Network.HTTP.Simple
 import Network.Wai.Handler.Warp
+import Optics (over)
 import System.IO (IO)
 import Test.Hspec
 import Prelude (fromIntegral)
 
 import OpenApiTH.OpenApi.Server
 import OpenApiTH.Operation.HttpClient
+import OpenApiTH.Operation.Message
 import OpenApiTH.Operation.Operation
+import OpenApiTH.Operation.RequestBuilder
 import OpenApiTH.Operation.Wai
 
 -- | Test making an HTTP request using http-client as the client
 --   and Warp as the server
 assertHttpClientWarpExchange
   ∷ ∀ op
-   . (HttpClientOperation op, WaiOperation op)
+   . Operation op
   ⇒ (Show (OperationResponse op), Eq (OperationResponse op))
   ⇒ OperationRequest op
   → OperationServer op IO
@@ -31,7 +34,11 @@ assertHttpClientWarpExchange request server = do
   expectedResponse ← server request
   testWithApplication (pure $ operationWaiApplication @op server) \port → do
     let serverUrl = localhost & setServerPort (fromIntegral port)
-    httpClientRequest ← setHttpClientRequestServerUrl serverUrl <$> operationRequestToHttpClient @op request
+    requestBuilder ←
+      over messageHead (setRequestBuilderServerUrl serverUrl)
+        <$> buildOperationRequest @op request
+    httpClientRequest ← buildHttpClientRequest requestBuilder
     withResponse httpClientRequest $ \httpClientResponse → do
-      response ← httpClientToOperationResponse @op httpClientResponse
+      responseReader ← readHttpClientResponse httpClientResponse
+      response ← readOperationResponse @op responseReader
       response `shouldBe` expectedResponse

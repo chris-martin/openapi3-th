@@ -13,6 +13,7 @@ import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Tuple
 import Data.Vector (Vector)
+import Iri.Data (Path (..), PathSegment (..))
 import Language.Haskell.TH
 import Language.Haskell.TH.Lib
 import Language.Haskell.TH.Syntax qualified as TH
@@ -24,7 +25,10 @@ import Network.Wai qualified as Wai
 
 import OpenApiTH.Declare.Options
 import OpenApiTH.Operation.HttpClient
+import OpenApiTH.Operation.Message
 import OpenApiTH.Operation.Operation
+import OpenApiTH.Operation.RequestBuilder
+import OpenApiTH.Operation.RequestBuilder qualified as RB
 import OpenApiTH.Operation.Wai
 
 declare ∷ (ToOptions opt, MonadFail m, Quote m) ⇒ opt → m [Dec]
@@ -35,35 +39,44 @@ declare opt =
       yieldM $ dataD (cxt []) name [] Nothing [] []
       yieldManyM
         [d|
-          type instance OperationRequest $(conT name) = ()
-
-          type instance OperationResponse $(conT name) = Vector Text
-
           instance Operation $(conT name) where
-
-            buildOperationRequest _ = mempty
-            buildOperationResponse xs =
-              pure $
-                Wai.responseLBS
-                  Http.ok200
-                  [(Http.hContentType, "application/json")]
-                  (JSON.encode xs)
+            type OperationRequest $(conT name) = ()
+            buildOperationRequest () =
+              pure
+                Message
+                  { head =
+                      RequestBuilder
+                        { RB.server = Nothing
+                        , RB.method = "GET"
+                        , RB.path = Path [PathSegment "users"]
+                        , RB.query = []
+                        }
+                  , body = mempty
+                  }
             readOperationRequest _ = pure ()
-            readOperationResponse rr = do
-              let headers = HttpClient.responseHeaders httpClientResponse
-                  contentTypeMaybe = List.lookup Http.hContentType headers
-                  statusCode = Http.statusCode $ HttpClient.responseStatus httpClientResponse
-              case statusCode of
-                200 → case contentTypeMaybe of
-                  Just "application/json" → do
-                    body ←
-                      Conduit.runConduit $
-                        HttpClient.responseBody httpClientResponse Conduit..| Conduit.sinkLazy
-                    case JSON.decode body of
-                      Nothing → _
-                      Just response → pure response
-                  _ → _
-                _ → _
+
+            type OperationResponse $(conT name) = Vector Text
+            -- buildOperationResponse xs =
+            --   pure $
+            --     Wai.responseLBS
+            --       Http.ok200
+            --       [(Http.hContentType, "application/json")]
+            --       (JSON.encode xs)
+            -- readOperationResponse rr = do
+            --   let headers = HttpClient.responseHeaders httpClientResponse
+            --       contentTypeMaybe = List.lookup Http.hContentType headers
+            --       statusCode = Http.statusCode $ HttpClient.responseStatus httpClientResponse
+            --   case statusCode of
+            --     200 → case contentTypeMaybe of
+            --       Just "application/json" → do
+            --         body ←
+            --           Conduit.runConduit $
+            --             HttpClient.responseBody httpClientResponse Conduit..| Conduit.sinkLazy
+            --         case JSON.decode body of
+            --           Nothing → _
+            --           Just response → pure response
+            --       _ → _
+            --     _ → _
           |]
  where
   Options {specFile, operations} = toOptions opt

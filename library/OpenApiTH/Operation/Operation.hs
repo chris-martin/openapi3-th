@@ -6,46 +6,36 @@ import Conduit
 import Control.Monad.Fail
 import Control.Monad.Yield
 import Data.ByteString (ByteString)
+import Data.ByteString qualified as BS
 import Data.ByteString.Builder (Builder)
+import Data.ByteString.Builder qualified as BS (Builder)
 import Data.ByteString.Builder qualified as Builder
 import Data.ByteString.Lazy (LazyByteString)
+import Data.Word (Word16)
 import Iri.Data (Authority, Fragment, Host, Iri, Path (..), Port, Query, Scheme, Security (..))
+import List.Transformer
 import System.IO (IO)
 
-import Data.Word (Word16)
 import OpenApiTH.OpenApi.Server
-
-type family OperationRequest op ∷ Type
-
-type family OperationResponse op ∷ Type
-
-type OperationServer op m = OperationRequest op → m (OperationResponse op)
+import OpenApiTH.Operation.Message
+import OpenApiTH.Operation.RequestBuilder
 
 class Operation op where
-  buildOperationRequest ∷ OperationRequest op → IO RequestBuilder
-  buildOperationResponse ∷ OperationResponse op → IO ResponseBuilder
-  readOperationRequest ∷ RequestReader → IO (OperationRequest op)
-  readOperationResponse ∷ ResponseReader → IO (OperationResponse op)
+  type OperationRequest op ∷ Type
+  type OperationResponse op ∷ Type
+  buildOperationRequest
+    ∷ OperationRequest op → IO (Message RequestBuilder (ListT IO ByteString))
+  buildOperationResponse
+    ∷ OperationResponse op → IO (Message ResponseBuilder (ListT IO ByteString))
+  readOperationRequest
+    ∷ Message RequestReader (ListT IO ByteString) → IO (OperationRequest op)
+  readOperationResponse
+    ∷ Message ResponseReader (ListT IO ByteString) → IO (OperationResponse op)
 
-data RequestBuilder = RequestBuilder
-  { server ∷ Maybe Server
-  , method ∷ ByteString
-  , path ∷ Path
-  , query ∷ [(ByteString, Maybe ByteString)]
-  , body ∷ LazyByteString
-  }
+type OperationServer op m = OperationRequest op → m (OperationResponse op)
 
 data ResponseBuilder = ResponseBuilder
 
 data RequestReader
 
 data ResponseReader
-
-setRequestBuilderServerUrl ∷ ∀ op. ServerUrl → RequestBuilder → RequestBuilder
-setRequestBuilderServerUrl
-  ServerUrl {security, host, port, path = Path pathPrefix}
-  rb@RequestBuilder {path = Path path} =
-    rb
-      { server = Just Server {security, host, port}
-      , path = Path $ pathPrefix <> path
-      }

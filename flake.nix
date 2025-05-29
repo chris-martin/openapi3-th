@@ -1,6 +1,6 @@
 {
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
     flake-utils.url = "github:numtide/flake-utils";
   };
   outputs = inputs:
@@ -10,8 +10,10 @@
         devShells.default = nixpkgs.mkShell {
           buildInputs = [ nixpkgs.zlib ];
           nativeBuildInputs = [
-            nixpkgs.ghc
-            nixpkgs.haskell-language-server
+            nixpkgs.haskell.compiler.ghc910
+            (nixpkgs.haskell-language-server.override {
+              supportedGhcVersions = [ "9101" ];
+            })
             (nixpkgs.haskell.lib.justStaticExecutables
               nixpkgs.haskellPackages.cabal-fmt)
             nixpkgs.cabal-install

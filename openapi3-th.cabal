@@ -37,8 +37,10 @@ library
     , http-conduit
     , http-types
     , iri
+    , list-transformer
     , monad-validate
     , network-uri
+    , optics
     , quaalude
     , template-haskell
     , text
@@ -57,6 +59,7 @@ library
     OpenApiTH.Declare.Declare
     OpenApiTH.Declare.Options
     OpenApiTH.Declare.OptionsBuilder
+    OpenApiTH.ListT
     OpenApiTH.OpenApi.DataType
     OpenApiTH.OpenApi.ReadSpecFile
     OpenApiTH.OpenApi.ResolveSpecPath
@@ -65,7 +68,10 @@ library
     OpenApiTH.OpenApi.Spec
     OpenApiTH.OpenApi.SpecPath
     OpenApiTH.Operation.HttpClient
+    OpenApiTH.Operation.Message
     OpenApiTH.Operation.Operation
+    OpenApiTH.Operation.RequestBuilder
+    OpenApiTH.Operation.ResponseBuilder
     OpenApiTH.Operation.Testing
     OpenApiTH.Operation.Wai
 

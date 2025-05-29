@@ -22,25 +22,30 @@ import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
 import Data.Vector qualified as V
 import Iri.Data (DomainLabel (..), Host (..), Path (..), PathSegment (..), Port (..), RegName (..), Security (..))
+import List.Transformer (ListT)
 import Network.HTTP.Client qualified as HttpClient
 import Network.HTTP.Simple
 import Network.URI qualified as URI
 import Network.Wai.Handler.Warp
-import OpenApiTH.OpenApi.Server
-import OpenApiTH.Operation.Operation
-import OpenApiTH.Operation.Wai
 import System.IO (IO)
 import Test.Hspec
 import Text.Show (show)
 import Prelude (fromIntegral)
 
-buildHttpClientRequest ∷ RequestBuilder → IO HttpClient.Request
-buildHttpClientRequest rb = do
+import OpenApiTH.OpenApi.Server
+import OpenApiTH.Operation.Message
+import OpenApiTH.Operation.Operation
+import OpenApiTH.Operation.RequestBuilder
+import OpenApiTH.Operation.Wai
+
+buildHttpClientRequest
+  ∷ Message RequestBuilder (ListT IO ByteString) → IO HttpClient.Request
+buildHttpClientRequest message = do
   result ← runValidateT do
-    server ← maybe (refute ["No server"]) pure rb.server
+    server ← maybe (refute ["No server"]) pure message.head.server
     pure $
       HttpClient.defaultRequest
-        & setRequestMethod rb.method
+        & setRequestMethod message.head.method
         & setRequestSecure (let Security x = server.security in x)
         & setRequestHost
           ( BSL.toStrict $
@@ -58,12 +63,13 @@ buildHttpClientRequest rb = do
         & setRequestPath
           ( BSL.toStrict $
               BSB.toLazyByteString $
-                renderPath rb.path
+                renderPath message.head.path
           )
 
   either (fail . show @[Text]) pure result
 
-readHttpClientResponse ∷ HttpClient.Response (ConduitT () ByteString IO ()) → IO ResponseReader
+readHttpClientResponse
+  ∷ HttpClient.Response (ConduitT () ByteString IO ()) → IO (Message ResponseReader (ListT IO ByteString))
 readHttpClientResponse rr = _
 
 renderPath ∷ Path → BSB.Builder

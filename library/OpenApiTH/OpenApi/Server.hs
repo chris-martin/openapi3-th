@@ -22,6 +22,7 @@ data Server = Server
   , host ∷ Host
   , port ∷ Port
   }
+  deriving stock (Eq, Show)
 
 data ServerUrl = ServerUrl
   { security ∷ Security
@@ -29,7 +30,7 @@ data ServerUrl = ServerUrl
   , port ∷ Port
   , path ∷ Path
   }
-  deriving stock (Lift)
+  deriving stock (Lift, Eq, Show)
 
 serverUrlQQ ∷ QuasiQuoter
 serverUrlQQ =
