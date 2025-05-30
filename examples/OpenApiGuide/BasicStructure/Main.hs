@@ -29,7 +29,7 @@ spec = describe "" do
   it @Expectation "" do
     request ← buildOperationRequest @GetUsers ()
     request.head
-      `shouldBe` RequestBuilder
+      `shouldBe` OutgoingRequest
         { server = Nothing
         , method = "GET"
         , path = Path [PathSegment "users"]

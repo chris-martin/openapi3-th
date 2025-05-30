@@ -7,8 +7,12 @@ import List.Transformer
 import Network.Wai
 import System.IO (IO)
 
+import OpenApiTH.Operation.IncomingRequest
+import OpenApiTH.Operation.IncomingResponse
 import OpenApiTH.Operation.Message
 import OpenApiTH.Operation.Operation
+import OpenApiTH.Operation.OutgoingRequest
+import OpenApiTH.Operation.OutgoingResponse
 
 waiToOperationRequest
   ∷ ∀ op
@@ -24,10 +28,10 @@ operationResponseToWai
   → IO Response
 operationResponseToWai = buildOperationResponse @op >=> buildWaiResponse
 
-buildWaiResponse ∷ Message ResponseBuilder (ListT IO ByteString) → IO Response
+buildWaiResponse ∷ Message OutgoingResponse (ListT IO ByteString) → IO Response
 buildWaiResponse _ = _
 
-readWaiRequest ∷ Request → IO (Message RequestReader (ListT IO ByteString))
+readWaiRequest ∷ Request → IO (Message IncomingRequest (ListT IO ByteString))
 readWaiRequest _ = _
 
 operationWaiApplication

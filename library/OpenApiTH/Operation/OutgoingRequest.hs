@@ -1,4 +1,4 @@
-module OpenApiTH.Operation.RequestBuilder where
+module OpenApiTH.Operation.OutgoingRequest where
 
 import Essentials
 
@@ -16,7 +16,7 @@ import OpenApiTH.OpenApi.Server
 
 -- | Intermediate representation of a request header to be turned into
 --   an HTTP message
-data RequestBuilder = RequestBuilder
+data OutgoingRequest = OutgoingRequest
   { server ∷ Maybe Server
   , method ∷ ByteString
   , path ∷ Path
@@ -24,10 +24,10 @@ data RequestBuilder = RequestBuilder
   }
   deriving stock (Eq, Show)
 
-setRequestBuilderServerUrl ∷ ∀ op. ServerUrl → RequestBuilder → RequestBuilder
+setRequestBuilderServerUrl ∷ ∀ op. ServerUrl → OutgoingRequest → OutgoingRequest
 setRequestBuilderServerUrl
   ServerUrl {security, host, port, path = Path pathPrefix}
-  rb@RequestBuilder {path = Path path} =
+  rb@OutgoingRequest {path = Path path} =
     rb
       { server = Just Server {security, host, port}
       , path = Path $ pathPrefix <> path

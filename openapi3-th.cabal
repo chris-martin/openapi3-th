@@ -68,10 +68,12 @@ library
     OpenApiTH.OpenApi.Spec
     OpenApiTH.OpenApi.SpecPath
     OpenApiTH.Operation.HttpClient
+    OpenApiTH.Operation.IncomingRequest
+    OpenApiTH.Operation.IncomingResponse
     OpenApiTH.Operation.Message
     OpenApiTH.Operation.Operation
-    OpenApiTH.Operation.RequestBuilder
-    OpenApiTH.Operation.ResponseBuilder
+    OpenApiTH.Operation.OutgoingRequest
+    OpenApiTH.Operation.OutgoingResponse
     OpenApiTH.Operation.Testing
     OpenApiTH.Operation.Wai
 

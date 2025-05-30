@@ -17,25 +17,31 @@ import List.Transformer
 import System.IO (IO)
 
 import OpenApiTH.OpenApi.Server
+import OpenApiTH.Operation.IncomingRequest
+import OpenApiTH.Operation.IncomingResponse
 import OpenApiTH.Operation.Message
-import OpenApiTH.Operation.RequestBuilder
+import OpenApiTH.Operation.OutgoingRequest
+import OpenApiTH.Operation.OutgoingResponse
 
 class Operation op where
   type OperationRequest op ∷ Type
   type OperationResponse op ∷ Type
+
   buildOperationRequest
-    ∷ OperationRequest op → IO (Message RequestBuilder (ListT IO ByteString))
+    ∷ OperationRequest op
+    → IO (Message OutgoingRequest (ListT IO ByteString))
+
   buildOperationResponse
-    ∷ OperationResponse op → IO (Message ResponseBuilder (ListT IO ByteString))
+    ∷ OperationResponse op
+    → IO (Message OutgoingResponse (ListT IO ByteString))
+
   readOperationRequest
-    ∷ Message RequestReader (ListT IO ByteString) → IO (OperationRequest op)
+    ∷ Message IncomingRequest (ListT IO ByteString)
+    → IO (OperationRequest op)
+
   readOperationResponse
-    ∷ Message ResponseReader (ListT IO ByteString) → IO (OperationResponse op)
+    ∷ Message IncomingResponse (ListT IO ByteString)
+    → IO (OperationResponse op)
 
-type OperationServer op m = OperationRequest op → m (OperationResponse op)
-
-data ResponseBuilder = ResponseBuilder
-
-data RequestReader
-
-data ResponseReader
+type OperationServer op m =
+  OperationRequest op → m (OperationResponse op)

@@ -33,13 +33,16 @@ import Text.Show (show)
 import Prelude (fromIntegral)
 
 import OpenApiTH.OpenApi.Server
+import OpenApiTH.Operation.IncomingRequest
+import OpenApiTH.Operation.IncomingResponse
 import OpenApiTH.Operation.Message
 import OpenApiTH.Operation.Operation
-import OpenApiTH.Operation.RequestBuilder
+import OpenApiTH.Operation.OutgoingRequest
+import OpenApiTH.Operation.OutgoingResponse
 import OpenApiTH.Operation.Wai
 
 buildHttpClientRequest
-  ∷ Message RequestBuilder (ListT IO ByteString) → IO HttpClient.Request
+  ∷ Message OutgoingRequest (ListT IO ByteString) → IO HttpClient.Request
 buildHttpClientRequest message = do
   result ← runValidateT do
     server ← maybe (refute ["No server"]) pure message.head.server
@@ -69,7 +72,7 @@ buildHttpClientRequest message = do
   either (fail . show @[Text]) pure result
 
 readHttpClientResponse
-  ∷ HttpClient.Response (ConduitT () ByteString IO ()) → IO (Message ResponseReader (ListT IO ByteString))
+  ∷ HttpClient.Response (ConduitT () ByteString IO ()) → IO (Message IncomingResponse (ListT IO ByteString))
 readHttpClientResponse rr = _
 
 renderPath ∷ Path → BSB.Builder

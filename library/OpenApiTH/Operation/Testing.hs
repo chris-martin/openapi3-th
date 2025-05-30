@@ -18,7 +18,7 @@ import OpenApiTH.OpenApi.Server
 import OpenApiTH.Operation.HttpClient
 import OpenApiTH.Operation.Message
 import OpenApiTH.Operation.Operation
-import OpenApiTH.Operation.RequestBuilder
+import OpenApiTH.Operation.OutgoingRequest
 import OpenApiTH.Operation.Wai
 
 -- | Test making an HTTP request using http-client as the client

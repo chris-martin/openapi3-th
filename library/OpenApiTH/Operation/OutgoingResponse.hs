@@ -1,4 +1,4 @@
-module OpenApiTH.Operation.ResponseBuilder where
+module OpenApiTH.Operation.OutgoingResponse where
 
 import Essentials
 
@@ -18,7 +18,7 @@ import OpenApiTH.OpenApi.Server
 
 -- | Intermediate representation of a response header to be turned into
 --   an HTTP message
-data ResponseBuilder = ResponseBuilder
+data OutgoingResponse = OutgoingResponse
   { statusCode ∷ ByteString
   }
   deriving stock (Eq, Show)

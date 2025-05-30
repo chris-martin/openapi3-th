@@ -27,8 +27,8 @@ import OpenApiTH.Declare.Options
 import OpenApiTH.Operation.HttpClient
 import OpenApiTH.Operation.Message
 import OpenApiTH.Operation.Operation
-import OpenApiTH.Operation.RequestBuilder
-import OpenApiTH.Operation.RequestBuilder qualified as RB
+import OpenApiTH.Operation.OutgoingRequest
+import OpenApiTH.Operation.OutgoingRequest qualified as RB
 import OpenApiTH.Operation.Wai
 
 declare ∷ (ToOptions opt, MonadFail m, Quote m) ⇒ opt → m [Dec]
@@ -45,7 +45,7 @@ declare opt =
               pure
                 Message
                   { head =
-                      RequestBuilder
+                      OutgoingRequest
                         { RB.server = Nothing
                         , RB.method = "GET"
                         , RB.path = Path [PathSegment "users"]

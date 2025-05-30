@@ -11,7 +11,7 @@ module OpenApiTH (
   setServerPort,
   serverUrlQQ,
   assertHttpClientWarpExchange,
-  RequestBuilder (..),
+  OutgoingRequest (..),
   PathSegment (..),
   Path (..),
   Message (..),
@@ -27,6 +27,6 @@ import OpenApiTH.OpenApi.Server
 import OpenApiTH.Operation.HttpClient
 import OpenApiTH.Operation.Message
 import OpenApiTH.Operation.Operation
-import OpenApiTH.Operation.RequestBuilder
+import OpenApiTH.Operation.OutgoingRequest
 import OpenApiTH.Operation.Testing
 import OpenApiTH.Operation.Wai
