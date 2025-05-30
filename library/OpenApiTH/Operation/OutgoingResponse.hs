@@ -20,5 +20,6 @@ import OpenApiTH.OpenApi.Server
 --   an HTTP message
 data OutgoingResponse = OutgoingResponse
   { statusCode ∷ ByteString
+  , contentType ∷ ByteString
   }
   deriving stock (Eq, Show)

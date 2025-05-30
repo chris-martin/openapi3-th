@@ -29,10 +29,21 @@ operationResponseToWai
 operationResponseToWai = buildOperationResponse @op >=> buildWaiResponse
 
 buildWaiResponse ∷ Message OutgoingResponse (ListT IO ByteString) → IO Response
-buildWaiResponse _ = _
+buildWaiResponse x = _
 
 readWaiRequest ∷ Request → IO (Message IncomingRequest (ListT IO ByteString))
-readWaiRequest _ = _
+readWaiRequest x =
+  pure
+    Message
+      { head =
+          IncomingRequest
+            { server = _
+            , method = _
+            , path = _
+            , query = _
+            }
+      , body = _
+      }
 
 operationWaiApplication
   ∷ ∀ op

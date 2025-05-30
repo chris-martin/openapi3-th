@@ -5,8 +5,12 @@ import Essentials
 import Data.ByteString (ByteString)
 import Data.ByteString.Builder qualified as BSB
 import Data.ByteString.Lazy (LazyByteString)
+import Data.ByteString.Lazy qualified as BSL
 import List.Transformer (ListT)
 import List.Transformer qualified as ListT
 
 foldBsList ∷ Monad m ⇒ ListT m ByteString → m LazyByteString
 foldBsList = ListT.fold (\x a → x <> BSB.byteString a) mempty BSB.toLazyByteString
+
+lbsChunkList ∷ Monad m ⇒ LazyByteString → ListT m ByteString
+lbsChunkList = ListT.select . BSL.toChunks
