@@ -64,6 +64,7 @@ library
     OpenApiTH.OpenApi.ResolveSpecPath
     OpenApiTH.OpenApi.Schema
     OpenApiTH.OpenApi.Server
+    OpenApiTH.OpenApi.ServerUrl
     OpenApiTH.OpenApi.Spec
     OpenApiTH.OpenApi.SpecPath
     OpenApiTH.Operation.HttpClient
