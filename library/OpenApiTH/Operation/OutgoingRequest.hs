@@ -21,6 +21,7 @@ data OutgoingRequest = OutgoingRequest
   , method ∷ ByteString
   , path ∷ Path
   , query ∷ [(ByteString, Maybe ByteString)]
+  , accept ∷ ByteString
   }
   deriving stock (Eq, Show)
 

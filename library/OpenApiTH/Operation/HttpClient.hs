@@ -72,6 +72,12 @@ buildHttpClientRequest message = do
               BSB.toLazyByteString $
                 renderPath message.head.path
           )
+        & ( \x →
+              x
+                { HttpClient.requestHeaders =
+                    (Http.hAccept, message.head.accept) : HttpClient.requestHeaders x
+                }
+          )
 
   either (fail . show @[Text]) pure result
 

@@ -26,9 +26,10 @@ server () = pure ["AJ", "Pat"]
 
 spec ∷ Spec
 spec = describe "" do
-  it @Expectation "" do
+  it @Expectation "round trip" do
     assertHttpClientWarpExchange @GetUsers () server
-  it @Expectation "" do
+
+  it @Expectation "request" do
     request ← buildOperationRequest @GetUsers ()
     request.head
       `shouldBe` OutgoingRequest
@@ -36,6 +37,17 @@ spec = describe "" do
         , method = "GET"
         , path = Path [PathSegment "users"]
         , query = []
+        , accept = "application/json"
         }
     requestBody ← ListT.fold (<>) mempty id request.body
     BSB.toLazyByteString requestBody `shouldBe` ""
+
+  it @Expectation "response" do
+    response ← buildOperationResponse @GetUsers ["AJ", "Pat"]
+    response.head
+      `shouldBe` OutgoingResponse
+        { statusCode = "200"
+        , contentType = "application/json"
+        }
+    responseBody ← ListT.fold (<>) mempty id response.body
+    BSB.toLazyByteString responseBody `shouldBe` "[\"AJ\",\"Pat\"]"

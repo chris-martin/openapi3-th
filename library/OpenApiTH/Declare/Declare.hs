@@ -60,6 +60,7 @@ declare opt =
                         , OReq.method = "GET"
                         , OReq.path = Path [PathSegment "users"]
                         , OReq.query = []
+                        , OReq.accept = "application/json"
                         }
                   , body = empty
                   }
