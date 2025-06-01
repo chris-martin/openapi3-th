@@ -4,10 +4,12 @@ import Essentials
 
 import Test.Hspec
 
+import Data.ByteString.Builder qualified as BSB
 import Data.Foldable
 import Data.List (map)
 import Data.Text (Text)
 import Language.Haskell.TH qualified as TH
+import List.Transformer qualified as ListT
 import Network.HTTP.Simple
 import Network.Wai.Handler.Warp
 import System.IO (IO)
@@ -35,5 +37,5 @@ spec = describe "" do
         , path = Path [PathSegment "users"]
         , query = []
         }
-    requestBody ← foldBsList request.body
-    requestBody `shouldBe` ""
+    requestBody ← ListT.fold (<>) mempty id request.body
+    BSB.toLazyByteString requestBody `shouldBe` ""

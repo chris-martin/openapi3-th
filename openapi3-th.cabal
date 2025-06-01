@@ -59,7 +59,6 @@ library
     OpenApiTH.Declare.Declare
     OpenApiTH.Declare.Options
     OpenApiTH.Declare.OptionsBuilder
-    OpenApiTH.ListT
     OpenApiTH.OpenApi.DataType
     OpenApiTH.OpenApi.ReadSpecFile
     OpenApiTH.OpenApi.ResolveSpecPath
@@ -84,8 +83,10 @@ test-suite test
   hs-source-dirs: test examples
   build-depends:
     , base
+    , bytestring
     , hspec
     , http-conduit
+    , list-transformer
     , openapi3-th
     , quaalude
     , template-haskell

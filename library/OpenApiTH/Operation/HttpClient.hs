@@ -4,6 +4,7 @@ module OpenApiTH.Operation.HttpClient where
 import Essentials
 
 import Conduit
+import Control.Applicative (empty)
 import Control.Monad.Fail
 import Control.Monad.Validate (refute, runValidateT)
 import Control.Monad.Yield
@@ -14,6 +15,7 @@ import Data.ByteString.Builder (Builder)
 import Data.ByteString.Builder qualified as BSB
 import Data.ByteString.Builder qualified as Builder
 import Data.ByteString.Lazy (LazyByteString)
+import Data.Conduit.Internal (ConduitT (..), Pipe (..))
 import Data.Either (either)
 import Data.Foldable (concat, fold)
 import Data.List qualified as List
@@ -22,9 +24,11 @@ import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
 import Data.Vector qualified as V
 import Iri.Data (DomainLabel (..), Host (..), Path (..), PathSegment (..), Port (..), RegName (..), Security (..))
-import List.Transformer (ListT)
+import List.Transformer (ListT (..), Step (..))
 import Network.HTTP.Client qualified as HttpClient
 import Network.HTTP.Simple
+import Network.HTTP.Types.Header qualified as Http
+import Network.HTTP.Types.Status qualified as Http
 import Network.URI qualified as URI
 import Network.Wai.Handler.Warp
 import System.IO (IO)
@@ -42,7 +46,7 @@ import OpenApiTH.Operation.OutgoingResponse
 import OpenApiTH.Operation.Wai
 
 buildHttpClientRequest
-  ∷ Message OutgoingRequest (ListT IO ByteString) → IO HttpClient.Request
+  ∷ Message OutgoingRequest (ListT IO BSB.Builder) → IO HttpClient.Request
 buildHttpClientRequest message = do
   result ← runValidateT do
     server ← maybe (refute ["No server"]) pure message.head.server
@@ -72,8 +76,28 @@ buildHttpClientRequest message = do
   either (fail . show @[Text]) pure result
 
 readHttpClientResponse
-  ∷ HttpClient.Response (ConduitT () ByteString IO ()) → IO (Message IncomingResponse (ListT IO ByteString))
-readHttpClientResponse rr = _
+  ∷ HttpClient.Response (ConduitT () ByteString IO ())
+  → IO (Message IncomingResponse (ListT IO BSB.Builder))
+readHttpClientResponse x = do
+  pure
+    Message
+      { head =
+          IncomingResponse
+            { statusCode = statusBs $ HttpClient.responseStatus x
+            , contentType = List.lookup Http.hContentType $ HttpClient.responseHeaders x
+            }
+      , body =
+          let go = \case
+                HaveOutput next o → ListT $ pure $ Cons (BSB.byteString o) $ go next
+                NeedInput f _ → go $ f ()
+                Done () → empty
+                PipeM m → lift m >>= go
+                Leftover _ _ → empty
+           in go $ ($ Done) $ unConduitT $ HttpClient.responseBody x
+      }
+
+statusBs ∷ Http.Status → BSL.StrictByteString
+statusBs = BSL.toStrict . BSB.toLazyByteString . BSB.intDec . Http.statusCode
 
 renderPath ∷ Path → BSB.Builder
 renderPath =

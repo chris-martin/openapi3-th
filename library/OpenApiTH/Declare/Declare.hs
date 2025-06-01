@@ -3,11 +3,13 @@ module OpenApiTH.Declare.Declare where
 import Essentials
 
 import Conduit qualified
+import Control.Applicative (empty)
 import Control.Monad.Fail
 import Control.Monad.Trans.Class
 import Control.Monad.Yield
 import Data.Aeson qualified as JSON
 import Data.ByteString (ByteString)
+import Data.ByteString.Builder qualified as BSB
 import Data.Foldable
 import Data.List qualified as List
 import Data.Text (Text)
@@ -18,6 +20,7 @@ import Iri.Data (Path (..), PathSegment (..))
 import Language.Haskell.TH
 import Language.Haskell.TH.Lib
 import Language.Haskell.TH.Syntax qualified as TH
+import List.Transformer qualified as ListT
 import Network.HTTP.Client qualified as HttpClient
 import Network.HTTP.Simple qualified as HttpClient
 import Network.HTTP.Types.Header qualified as Http
@@ -25,7 +28,6 @@ import Network.HTTP.Types.Status qualified as Http
 import Network.Wai qualified as Wai
 
 import OpenApiTH.Declare.Options
-import OpenApiTH.ListT
 import OpenApiTH.Operation.HttpClient
 import OpenApiTH.Operation.IncomingRequest (IncomingRequest (IncomingRequest))
 import OpenApiTH.Operation.IncomingRequest qualified as IReq
@@ -59,7 +61,7 @@ declare opt =
                         , OReq.path = Path [PathSegment "users"]
                         , OReq.query = []
                         }
-                  , body = mempty
+                  , body = empty
                   }
             readOperationRequest _ = pure ()
 
@@ -73,7 +75,7 @@ declare opt =
                         { OResp.statusCode = "200"
                         , OResp.contentType = "application/json"
                         }
-                  , body = lbsChunkList $ JSON.encode xs
+                  , body = pure $ BSB.lazyByteString $ JSON.encode xs
                   }
 
             readOperationResponse x =
@@ -81,8 +83,8 @@ declare opt =
                 List.lookup
                   ((x.head ∷ IncomingResponse).statusCode ∷ ByteString)
                   [ (,) "200" $ do
-                      bodyLbs ← foldBsList x.body
-                      case JSON.decode bodyLbs of
+                      bodyBuilder ← ListT.fold (<>) mempty id x.body
+                      case JSON.decode (BSB.toLazyByteString bodyBuilder) of
                         Nothing → _
                         Just r → pure r
                   ]

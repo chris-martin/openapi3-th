@@ -9,6 +9,7 @@ import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.Builder (Builder)
 import Data.ByteString.Builder qualified as BS (Builder)
+import Data.ByteString.Builder qualified as BSB
 import Data.ByteString.Builder qualified as Builder
 import Data.ByteString.Lazy (LazyByteString)
 import Data.Word (Word16)
@@ -29,18 +30,18 @@ class Operation op where
 
   buildOperationRequest
     ∷ OperationRequest op
-    → IO (Message OutgoingRequest (ListT IO ByteString))
+    → IO (Message OutgoingRequest (ListT IO BSB.Builder))
 
   buildOperationResponse
     ∷ OperationResponse op
-    → IO (Message OutgoingResponse (ListT IO ByteString))
+    → IO (Message OutgoingResponse (ListT IO BSB.Builder))
 
   readOperationRequest
-    ∷ Message IncomingRequest (ListT IO ByteString)
+    ∷ Message IncomingRequest (ListT IO BSB.Builder)
     → IO (OperationRequest op)
 
   readOperationResponse
-    ∷ Message IncomingResponse (ListT IO ByteString)
+    ∷ Message IncomingResponse (ListT IO BSB.Builder)
     → IO (OperationResponse op)
 
 type OperationServer op m =

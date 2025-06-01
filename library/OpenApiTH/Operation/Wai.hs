@@ -2,8 +2,13 @@ module OpenApiTH.Operation.Wai where
 
 import Essentials
 
+import Control.Monad.Fail (fail)
 import Data.ByteString (ByteString)
+import Data.ByteString.Builder qualified as BSB
+import Data.ByteString.Char8 qualified as BS
+import Data.Int (Int)
 import List.Transformer
+import Network.HTTP.Types (Status (..))
 import Network.Wai qualified as Wai
 import System.IO (IO)
 
@@ -13,10 +18,6 @@ import OpenApiTH.Operation.Message
 import OpenApiTH.Operation.Operation
 import OpenApiTH.Operation.OutgoingRequest
 import OpenApiTH.Operation.OutgoingResponse
-import Network.HTTP.Types (Status(..))
-import Data.Int (Int)
-import qualified Data.ByteString.Char8 as BS
-import Control.Monad.Fail (fail)
 
 waiToOperationRequest
   ∷ ∀ op
@@ -32,18 +33,20 @@ operationResponseToWai
   → IO Wai.Response
 operationResponseToWai = buildOperationResponse @op >=> buildWaiResponse
 
-buildWaiResponse ∷ Message OutgoingResponse (ListT IO ByteString) → IO Wai.Response
+buildWaiResponse ∷ Message OutgoingResponse (ListT IO BSB.Builder) → IO Wai.Response
 buildWaiResponse message = do
-  let
-    Message{head,body} = message
-    OutgoingResponse{statusCode,contentType}  = head
-  statusCodeInt <- case BS.readInt statusCode of
-    Just (i,r) | BS.null r -> pure i
-    _ -> fail "Invalid status code"
+  let Message {head, body} = message
+      OutgoingResponse {statusCode, contentType} = head
+  statusCodeInt ← case BS.readInt statusCode of
+    Just (i, r) | BS.null r → pure i
+    _ → fail "Invalid status code"
   let status = Status statusCodeInt ""
-  pure $ Wai.responseStream status [] \write flush -> _
+  pure $ Wai.responseStream status [] (listToWaiStreamingBody message.body)
 
-readWaiRequest ∷ Wai.Request → IO (Message IncomingRequest (ListT IO ByteString))
+listToWaiStreamingBody ∷ ListT IO BSB.Builder → Wai.StreamingBody
+listToWaiStreamingBody xs write _flush = runListT $ xs >>= lift . write
+
+readWaiRequest ∷ Wai.Request → IO (Message IncomingRequest (ListT IO BSB.Builder))
 readWaiRequest x =
   pure
     Message
