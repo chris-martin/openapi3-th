@@ -6,9 +6,7 @@ module OpenApiTH (
   operationWaiApplication,
   Operation (..),
   OperationServer,
-  ServerUrl (..),
   localhost,
-  setServerPort,
   serverUrlQQ,
   assertHttpClientWarpExchange,
   OutgoingRequest (..),
@@ -18,6 +16,13 @@ module OpenApiTH (
   PathSegment (..),
   Path (..),
   Message (..),
+
+  -- * URLs
+  ServerUrl (..),
+  readServerUrl,
+  Hierarchy (..),
+  Authority (..),
+  Path (..),
 ) where
 
 import Iri.Data (Path (..), PathSegment (..))

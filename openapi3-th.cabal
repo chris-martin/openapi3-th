@@ -38,8 +38,9 @@ library
     , http-types
     , iri
     , list-transformer
+    , megaparsec
+    , modern-uri
     , monad-validate
-    , network-uri
     , optics
     , quaalude
     , template-haskell
@@ -95,4 +96,6 @@ test-suite test
     , warp
 
   -- cabal-fmt: expand examples
-  other-modules:  OpenApiGuide.BasicStructure.Main
+  other-modules:
+    OpenApiGuide.BasicStructure.Main
+    OpenApiGuide.ServerUrlFormat

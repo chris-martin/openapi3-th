@@ -34,7 +34,7 @@ assertHttpClientWarpExchange
 assertHttpClientWarpExchange request server = do
   expectedResponse ← server request
   testWithApplication (pure $ operationWaiApplication @op server) \port → do
-    let serverUrl = localhost & setServerPort (fromIntegral port)
+    let serverUrl = localhost (PresentPort $ fromIntegral port)
     requestBuilder ←
       over messageHead (setRequestBuilderServerUrl serverUrl)
         <$> buildOperationRequest @op request
