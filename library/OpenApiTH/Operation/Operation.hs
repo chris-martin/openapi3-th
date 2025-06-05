@@ -17,7 +17,7 @@ import Iri.Data (Authority, Fragment, Host, Iri, Path (..), Port, Query, Scheme,
 import List.Transformer
 import System.IO (IO)
 
-import OpenApiTH.OpenApi.Server
+import OpenApiTH.OpenApi.ResourceLocation
 import OpenApiTH.Operation.IncomingRequest
 import OpenApiTH.Operation.IncomingResponse
 import OpenApiTH.Operation.Message

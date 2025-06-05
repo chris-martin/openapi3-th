@@ -29,8 +29,7 @@ import Iri.Data (Path (..), PathSegment (..))
 import OpenApiTH.Declare.Declare
 import OpenApiTH.Declare.Options
 import OpenApiTH.Declare.OptionsBuilder
-import OpenApiTH.OpenApi.Server
-import OpenApiTH.OpenApi.ServerUrl
+import OpenApiTH.OpenApi.ResourceLocation
 import OpenApiTH.Operation.HttpClient
 import OpenApiTH.Operation.IncomingRequest
 import OpenApiTH.Operation.IncomingResponse

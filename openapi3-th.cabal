@@ -7,7 +7,9 @@ common base
   default-language:   GHC2021
   default-extensions:
     AllowAmbiguousTypes
+    ApplicativeDo
     BlockArguments
+    DataKinds
     DerivingStrategies
     DerivingVia
     DuplicateRecordFields
@@ -21,6 +23,7 @@ common base
     QuasiQuotes
     TemplateHaskell
     TypeFamilies
+    UndecidableInstances
     UnicodeSyntax
 
 library
@@ -36,10 +39,8 @@ library
     , http-client
     , http-conduit
     , http-types
-    , iri
     , list-transformer
     , megaparsec
-    , modern-uri
     , monad-validate
     , optics
     , quaalude
@@ -63,9 +64,8 @@ library
     OpenApiTH.OpenApi.DataType
     OpenApiTH.OpenApi.ReadSpecFile
     OpenApiTH.OpenApi.ResolveSpecPath
+    OpenApiTH.OpenApi.ResourceLocation
     OpenApiTH.OpenApi.Schema
-    OpenApiTH.OpenApi.Server
-    OpenApiTH.OpenApi.ServerUrl
     OpenApiTH.OpenApi.Spec
     OpenApiTH.OpenApi.SpecPath
     OpenApiTH.Operation.HttpClient

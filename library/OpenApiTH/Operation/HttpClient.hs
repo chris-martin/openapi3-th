@@ -29,14 +29,13 @@ import Network.HTTP.Client qualified as HttpClient
 import Network.HTTP.Simple
 import Network.HTTP.Types.Header qualified as Http
 import Network.HTTP.Types.Status qualified as Http
-import Network.URI qualified as URI
 import Network.Wai.Handler.Warp
 import System.IO (IO)
 import Test.Hspec
 import Text.Show (show)
 import Prelude (fromIntegral)
 
-import OpenApiTH.OpenApi.Server
+import OpenApiTH.OpenApi.ResourceLocation
 import OpenApiTH.Operation.IncomingRequest
 import OpenApiTH.Operation.IncomingResponse
 import OpenApiTH.Operation.Message

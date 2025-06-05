@@ -19,6 +19,7 @@ import Prelude (fromIntegral, show)
 
 import OpenApiTH
 
+-- https://swagger.io/docs/specification/v3_0/api-host-and-base-path/
 spec ∷ Spec
 spec = do
   it "" $ readServerUrl "https://api.example.com" `shouldBe` Right _

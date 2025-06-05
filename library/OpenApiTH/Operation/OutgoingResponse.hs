@@ -14,7 +14,6 @@ import System.IO (IO)
 
 import Data.ByteString qualified as BS
 import Data.Word (Word16)
-import OpenApiTH.OpenApi.Server
 
 -- | Intermediate representation of a response header to be turned into
 --   an HTTP message

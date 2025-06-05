@@ -14,8 +14,6 @@ import System.IO (IO)
 import Test.Hspec
 import Prelude (fromIntegral)
 
-import OpenApiTH.OpenApi.Server
-import OpenApiTH.OpenApi.ServerUrl
 import OpenApiTH.Operation.HttpClient
 import OpenApiTH.Operation.Message
 import OpenApiTH.Operation.Operation
