@@ -27,7 +27,9 @@ import Data.Vector qualified as V
 import Data.Word
 import Language.Haskell.TH.Quote
 import Language.Haskell.TH.Syntax
+import Numeric.Natural (Natural)
 import Text.Megaparsec qualified as P
+import Text.Megaparsec.Char.Lexer qualified as P
 
 data ResourceLocation = ResourceLocation
   { scheme ∷ Maybe Text
@@ -43,13 +45,10 @@ data ResourceContext
   deriving stock (Eq, Show, Lift)
 
 data Authority = Authority
-  { userInfo ∷ Maybe UserInfo
+  { userInfo ∷ Maybe Text
   , host ∷ Text
-  , port ∷ Maybe Word16
+  , port ∷ Maybe Natural
   }
-  deriving stock (Eq, Show, Lift)
-
-data UserInfo = UserInfo {user ∷ Text, password ∷ Maybe Text}
   deriving stock (Eq, Show, Lift)
 
 -- | https://datatracker.ietf.org/doc/html/rfc3986#section-5.2.2
@@ -118,7 +117,31 @@ schemeP =
       )
 
 authorityP ∷ Parser Authority
-authorityP = _
+authorityP = do
+  userInfo ← P.optional userInfoP <* P.single '@'
+  host ← ipv6P <|> ipv4P <|> hostNameP
+  port ← P.optional $ P.single ':' *> P.decimal
+  pure Authority {userInfo, host, port}
+
+ipv6P :: Parser Text
+ipv6P = _
+
+ipv4P :: Parser Text
+ipv4P = _
+
+hostNameP :: Parser Text
+hostNameP = _
+
+userInfoP ∷ Parser Text
+userInfoP =
+  P.takeWhileP
+    (Just "user info character")
+    ( \x →
+        Char.isAsciiLower x
+          || Char.isAsciiUpper x
+          || Char.isDigit x
+          || List.elem @[] x "-._~!$&'()*+,;="
+    )
 
 serverUrlQQ ∷ QuasiQuoter
 serverUrlQQ =
