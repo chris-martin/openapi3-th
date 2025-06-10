@@ -13,7 +13,6 @@ import Data.ByteString.Builder qualified as BSB
 import Data.ByteString.Builder qualified as Builder
 import Data.ByteString.Lazy (LazyByteString)
 import Data.Word (Word16)
-import Iri.Data (Authority, Fragment, Host, Iri, Path (..), Port, Query, Scheme, Security (..))
 import List.Transformer
 import System.IO (IO)
 

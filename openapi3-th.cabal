@@ -61,6 +61,7 @@ library
     OpenApiTH.Declare.Declare
     OpenApiTH.Declare.Options
     OpenApiTH.Declare.OptionsBuilder
+    OpenApiTH.OpenApi
     OpenApiTH.OpenApi.DataType
     OpenApiTH.OpenApi.ReadSpecFile
     OpenApiTH.OpenApi.ResolveSpecPath
@@ -77,6 +78,7 @@ library
     OpenApiTH.Operation.OutgoingResponse
     OpenApiTH.Operation.Testing
     OpenApiTH.Operation.Wai
+    OpenApiTH.PercentEncoding
 
 test-suite test
   import:         base

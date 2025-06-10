@@ -16,7 +16,6 @@ import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Tuple
 import Data.Vector (Vector)
-import Iri.Data (Path (..), PathSegment (..))
 import Language.Haskell.TH
 import Language.Haskell.TH.Lib
 import Language.Haskell.TH.Syntax qualified as TH
@@ -28,6 +27,7 @@ import Network.HTTP.Types.Status qualified as Http
 import Network.Wai qualified as Wai
 
 import OpenApiTH.Declare.Options
+import OpenApiTH.OpenApi
 import OpenApiTH.Operation.HttpClient
 import OpenApiTH.Operation.IncomingRequest (IncomingRequest (IncomingRequest))
 import OpenApiTH.Operation.IncomingRequest qualified as IReq
@@ -56,9 +56,13 @@ declare opt =
                 Message
                   { head =
                       OutgoingRequest
-                        { OReq.server = Nothing
+                        { OReq.location =
+                            ResourceLocation
+                              { scheme = Nothing
+                              , context = AbsoluteContext
+                              , path = ["users"]
+                              }
                         , OReq.method = "GET"
-                        , OReq.path = Path [PathSegment "users"]
                         , OReq.query = []
                         , OReq.accept = "application/json"
                         }

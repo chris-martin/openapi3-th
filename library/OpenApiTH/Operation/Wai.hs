@@ -12,12 +12,14 @@ import Network.HTTP.Types (Status (..))
 import Network.Wai qualified as Wai
 import System.IO (IO)
 
+import OpenApiTH.OpenApi
 import OpenApiTH.Operation.IncomingRequest
 import OpenApiTH.Operation.IncomingResponse
 import OpenApiTH.Operation.Message
 import OpenApiTH.Operation.Operation
 import OpenApiTH.Operation.OutgoingRequest
 import OpenApiTH.Operation.OutgoingResponse
+import OpenApiTH.PercentEncoding (percentDecodeUtf8)
 
 waiToOperationRequest
   ∷ ∀ op
@@ -52,7 +54,8 @@ readWaiRequest x =
     Message
       { head =
           IncomingRequest
-            { server = _
+            { host = percentDecodeUtf8 $ Wai.requestHeaderHost x
+            , authorization = _
             , method = _
             , path = _
             , query = _

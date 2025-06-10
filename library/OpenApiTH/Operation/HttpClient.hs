@@ -8,7 +8,7 @@ import Control.Applicative (empty)
 import Control.Monad.Fail
 import Control.Monad.Validate (refute, runValidateT)
 import Control.Monad.Yield
-import Data.ByteString (ByteString)
+import Data.ByteString (ByteString, StrictByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString qualified as BSL
 import Data.ByteString.Builder (Builder)
@@ -17,13 +17,12 @@ import Data.ByteString.Builder qualified as Builder
 import Data.ByteString.Lazy (LazyByteString)
 import Data.Conduit.Internal (ConduitT (..), Pipe (..))
 import Data.Either (either)
-import Data.Foldable (concat, fold)
+import Data.Foldable (concat, fold, toList)
 import Data.List qualified as List
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
 import Data.Vector qualified as V
-import Iri.Data (DomainLabel (..), Host (..), Path (..), PathSegment (..), Port (..), RegName (..), Security (..))
 import List.Transformer (ListT (..), Step (..))
 import Network.HTTP.Client qualified as HttpClient
 import Network.HTTP.Simple
@@ -35,7 +34,9 @@ import Test.Hspec
 import Text.Show (show)
 import Prelude (fromIntegral)
 
-import OpenApiTH.OpenApi.ResourceLocation
+import Data.Bits (toIntegralSized)
+import Data.Sequence (Seq)
+import OpenApiTH.OpenApi
 import OpenApiTH.Operation.IncomingRequest
 import OpenApiTH.Operation.IncomingResponse
 import OpenApiTH.Operation.Message
@@ -48,29 +49,27 @@ buildHttpClientRequest
   ∷ Message OutgoingRequest (ListT IO BSB.Builder) → IO HttpClient.Request
 buildHttpClientRequest message = do
   result ← runValidateT do
-    server ← maybe (refute ["No server"]) pure message.head.server
+    scheme ← maybe (refute ["No scheme"]) pure message.head.location.scheme
+    authority ← case message.head.location.context of
+      AuthorityContext x → pure x
+      _ → refute ["No authority"]
+    secure ←
+      maybe (refute ["Scheme is not HTTP"]) pure $
+        List.lookup (Text.toLower scheme) [("http", False), ("https", True)]
+    port ← case authority.port of
+      Just x → case toIntegralSized x of
+        Just y → pure y
+        _ → refute ["Port out of range"]
+      Nothing → pure case secure of
+        False → 80
+        True → 443
     pure $
       HttpClient.defaultRequest
         & setRequestMethod message.head.method
-        & setRequestSecure (let Security x = server.security in x)
-        & setRequestHost
-          ( BSL.toStrict $
-              BSB.toLazyByteString $
-                case server.host of
-                  NamedHost x → renderRegName x
-          )
-        & setRequestPort
-          ( case server.port of
-              PresentPort x → fromIntegral x
-              MissingPort → case server.security of
-                Security False → 80
-                Security True → 443
-          )
-        & setRequestPath
-          ( BSL.toStrict $
-              BSB.toLazyByteString $
-                renderPath message.head.path
-          )
+        & setRequestSecure secure
+        & setRequestHost (Text.encodeUtf8 authority.host)
+        & setRequestPort port
+        & setRequestPath (renderPath message.head.location.path)
         & ( \x →
               x
                 { HttpClient.requestHeaders =
@@ -101,27 +100,13 @@ readHttpClientResponse x = do
            in go $ ($ Done) $ unConduitT $ HttpClient.responseBody x
       }
 
-statusBs ∷ Http.Status → BSL.StrictByteString
+statusBs ∷ Http.Status → StrictByteString
 statusBs = BSL.toStrict . BSB.toLazyByteString . BSB.intDec . Http.statusCode
 
-renderPath ∷ Path → BSB.Builder
+renderPath ∷ Seq Text → StrictByteString
 renderPath =
-  fold
-    . fmap ((\(PathSegment x) → "/" <> BSB.byteString x))
-    . V.toList
-    . (\(Path xs) → xs)
-
-renderRegName ∷ RegName → BSB.Builder
-renderRegName =
-  fold
-    . List.intersperse "."
-    . fmap
-      ( BSB.byteString
-          . Text.encodeUtf8
-          . Text.pack
-          . URI.escapeURIString URI.isUnescapedInURIComponent
-          . Text.unpack
-          . (\(DomainLabel x) → x)
-      )
-    . V.toList
-    . (\(RegName xs) → xs)
+  BSL.toStrict
+    . BSB.toLazyByteString
+    . fold
+    . fmap ((\x → "/" <> Text.encodeUtf8Builder x))
+    . toList

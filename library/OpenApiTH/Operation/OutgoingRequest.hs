@@ -9,7 +9,6 @@ import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.Lazy (LazyByteString)
 import Data.Word (Word16)
-import Iri.Data (Authority, Fragment, Host, Iri, Path (..), Port, Query, Scheme, Security (..))
 import Optics
 import System.IO (IO)
 

@@ -1,5 +1,6 @@
 {-# OPTIONS_GHC -Wno-missing-fields #-}
 
+-- | Lax implementation of <https://www.rfc-editor.org/rfc/rfc3986>
 module OpenApiTH.OpenApi.ResourceLocation where
 
 import Essentials
@@ -8,6 +9,7 @@ import Control.Applicative (Alternative (..), asum)
 import Control.Monad (mfilter, unless)
 import Control.Monad.Fail
 import Control.Monad.Validate
+import Data.Bifunctor (first)
 import Data.Bool (not, (||))
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
@@ -30,6 +32,8 @@ import Language.Haskell.TH.Syntax
 import Numeric.Natural (Natural)
 import Text.Megaparsec qualified as P
 import Text.Megaparsec.Char.Lexer qualified as P
+import Text.Show (show)
+import Prelude (fromIntegral)
 
 data ResourceLocation = ResourceLocation
   { scheme ∷ Maybe Text
@@ -51,7 +55,7 @@ data Authority = Authority
   }
   deriving stock (Eq, Show, Lift)
 
--- | https://datatracker.ietf.org/doc/html/rfc3986#section-5.2.2
+-- | <https://datatracker.ietf.org/doc/html/rfc3986#section-5.2.2>
 instance Semigroup ResourceLocation where
   b <> r
     | Just {} ← r.scheme = r
@@ -66,22 +70,9 @@ instance Monoid ResourceLocation where
   mempty = ResourceLocation {scheme = Nothing, context = RelativeContext, path = Empty}
 
 readResourceLocation ∷ Text → Either [Text] ResourceLocation
-readResourceLocation = _
-
--- readResourceLocation t = runValidate do
---   iri ← either (const $ refute ["Invalid IRI (RFC 3987)"]) pure $ P.iri t
---   let Iri (Iri.Scheme scheme) hierarchy (Iri.Query query) (Iri.Fragment fragment) = iri
---   let (context, path) =
---         case hierarchy of
---           Iri.AuthorisedHierarchy au p → (AuthorityContext $ makeAuthority au, makePath p)
---           Iri.AbsoluteHierarchy p → (AbsoluteContext, makePath p)
---           Iri.RelativeHierarchy p → (RelativeContext, makePath p)
---        where
---         makePath (Iri.Path p) = Seq.fromList $ fmap makePathSegment $ V.toList p
---         makePathSegment (Iri.PathSegment x) = x
---   unless (BS.null query) $ dispute ["Query must be empty"]
---   unless (BS.null fragment) $ dispute ["Fragment must be empty"]
---   pure ResourceLocation {scheme = mfilter (not . BS.null) $ Just scheme, context, path}
+readResourceLocation x =
+  first ((: []) . Text.pack . show) $
+    P.parse (resourceLocationP <* P.eof) "" x
 
 type Parser = P.Parsec Void Text
 
@@ -119,18 +110,46 @@ schemeP =
 authorityP ∷ Parser Authority
 authorityP = do
   userInfo ← P.optional userInfoP <* P.single '@'
-  host ← ipv6P <|> ipv4P <|> hostNameP
+  host ← ipv6P <|> ipv4P <|> regNameP
   port ← P.optional $ P.single ':' *> P.decimal
   pure Authority {userInfo, host, port}
 
-ipv6P :: Parser Text
-ipv6P = _
+ipv6P ∷ Parser Text
+ipv6P =
+  fmap fst $
+    P.match $
+      P.single '['
+        *> P.takeWhileP
+          (Just "IpV6 character")
+          ( \x →
+              x == ':'
+                || Char.isAsciiLower x
+                || Char.isAsciiUpper x
+                || Char.isDigit x
+          )
+        <* P.single ']'
 
-ipv4P :: Parser Text
-ipv4P = _
+ipv4P ∷ Parser Text
+ipv4P =
+  fmap fst $
+    P.match $
+      P.satisfy Char.isDigit
+        *> P.takeWhileP
+          (Just "IPv4 character")
+          ( \x →
+              x == '.' || Char.isDigit x
+          )
 
-hostNameP :: Parser Text
-hostNameP = _
+regNameP ∷ Parser Text
+regNameP =
+  P.takeWhile1P
+    (Just "registered name character")
+    ( \x →
+        Char.isAsciiLower x
+          || Char.isAsciiUpper x
+          || Char.isDigit x
+          || List.elem @[] x "-._~%!$&'()*+,;="
+    )
 
 userInfoP ∷ Parser Text
 userInfoP =
@@ -158,6 +177,10 @@ localhostPort port =
     { scheme = Just "http"
     , context =
         AuthorityContext
-          Authority {userInfo = Nothing, host = "localhost", port = Just port}
+          Authority
+            { userInfo = Nothing
+            , host = "localhost"
+            , port = Just $ fromIntegral port
+            }
     , path = Empty
     }
