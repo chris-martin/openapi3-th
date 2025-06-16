@@ -12,8 +12,8 @@ import OpenApiTH.OpenApi
 -- | Intermediate representation of a request header read
 --   from an HTTP message
 data IncomingRequest = IncomingRequest
-  { host ∷ Text
-  , authorization ∷ Maybe Text
+  { host ∷ Maybe Text
+  , basicAuthentication ∷ Maybe Text
   , method ∷ ByteString
   , path ∷ Seq Text
   , query ∷ [(ByteString, Maybe ByteString)]

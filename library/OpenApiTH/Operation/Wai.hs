@@ -7,8 +7,11 @@ import Data.ByteString (ByteString)
 import Data.ByteString.Builder qualified as BSB
 import Data.ByteString.Char8 qualified as BS
 import Data.Int (Int)
+import Data.List qualified as List
+import Data.Text (Text)
 import List.Transformer
 import Network.HTTP.Types (Status (..))
+import Network.HTTP.Types.Header qualified as HTTP
 import Network.Wai qualified as Wai
 import System.IO (IO)
 
@@ -19,7 +22,8 @@ import OpenApiTH.Operation.Message
 import OpenApiTH.Operation.Operation
 import OpenApiTH.Operation.OutgoingRequest
 import OpenApiTH.Operation.OutgoingResponse
-import OpenApiTH.PercentEncoding (percentDecodeUtf8)
+import OpenApiTH.Web.BasicAuthentication (readBasicAuthentication)
+import OpenApiTH.Web.PercentEncoding (percentDecodeUtf8)
 
 waiToOperationRequest
   ∷ ∀ op
@@ -49,19 +53,16 @@ listToWaiStreamingBody ∷ ListT IO BSB.Builder → Wai.StreamingBody
 listToWaiStreamingBody xs write _flush = runListT $ xs >>= lift . write
 
 readWaiRequest ∷ Wai.Request → IO (Message IncomingRequest (ListT IO BSB.Builder))
-readWaiRequest x =
-  pure
-    Message
-      { head =
-          IncomingRequest
-            { host = percentDecodeUtf8 $ Wai.requestHeaderHost x
-            , authorization = _
-            , method = _
-            , path = _
-            , query = _
-            }
-      , body = _
-      }
+readWaiRequest x = do
+  let host = percentDecodeUtf8 =<< Wai.requestHeaderHost x
+      authorization = List.lookup HTTP.hAuthorization (Wai.requestHeaders x)
+      basicAuthentication = readBasicAuthentication =<< authorization
+      method = _
+      path = _
+      query = _
+      head = IncomingRequest {host, basicAuthentication, method, path, query}
+      body = _
+  pure Message {head, body}
 
 operationWaiApplication
   ∷ ∀ op

@@ -7,8 +7,8 @@ import Data.Aeson qualified as JSON
 import Data.Aeson.KeyMap qualified as KeyMap
 import Data.String
 import Language.Haskell.TH
-
 import Language.Haskell.TH qualified as TH
+
 import OpenApiTH.OpenApi.DataType
 
 data Schema = Schema {value ∷ JSON.Value}

@@ -16,12 +16,12 @@ import Data.Word (Word16)
 import List.Transformer
 import System.IO (IO)
 
-import OpenApiTH.OpenApi.ResourceLocation
 import OpenApiTH.Operation.IncomingRequest
 import OpenApiTH.Operation.IncomingResponse
 import OpenApiTH.Operation.Message
 import OpenApiTH.Operation.OutgoingRequest
 import OpenApiTH.Operation.OutgoingResponse
+import OpenApiTH.Web
 
 class Operation op where
   type OperationRequest op ∷ Type

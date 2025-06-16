@@ -16,6 +16,7 @@ common base
     LambdaCase
     NoFieldSelectors
     NoImplicitPrelude
+    OverloadedLabels
     OverloadedLists
     OverloadedRecordDot
     OverloadedStrings
@@ -31,6 +32,7 @@ library
   build-depends:
     , aeson
     , base
+    , base64
     , bytestring
     , conduit
     , containers
@@ -50,6 +52,7 @@ library
     , vector
     , wai
     , warp
+    , word8
     , yaml
     , yield
 
@@ -65,7 +68,6 @@ library
     OpenApiTH.OpenApi.DataType
     OpenApiTH.OpenApi.ReadSpecFile
     OpenApiTH.OpenApi.ResolveSpecPath
-    OpenApiTH.OpenApi.ResourceLocation
     OpenApiTH.OpenApi.Schema
     OpenApiTH.OpenApi.Spec
     OpenApiTH.OpenApi.SpecPath
@@ -78,7 +80,10 @@ library
     OpenApiTH.Operation.OutgoingResponse
     OpenApiTH.Operation.Testing
     OpenApiTH.Operation.Wai
-    OpenApiTH.PercentEncoding
+    OpenApiTH.Web
+    OpenApiTH.Web.BasicAuthentication
+    OpenApiTH.Web.PercentEncoding
+    OpenApiTH.Web.ResourceLocation
 
 test-suite test
   import:         base
@@ -88,6 +93,7 @@ test-suite test
   build-depends:
     , base
     , bytestring
+    , containers
     , hspec
     , http-conduit
     , list-transformer

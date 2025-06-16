@@ -12,7 +12,7 @@ import Data.Word (Word16)
 import Optics
 import System.IO (IO)
 
-import OpenApiTH.OpenApi.ResourceLocation
+import OpenApiTH.Web
 
 -- | Intermediate representation of a request header to be turned into
 --   an HTTP message

@@ -40,6 +40,7 @@ import OpenApiTH.Operation.OutgoingRequest qualified as OReq
 import OpenApiTH.Operation.OutgoingResponse (OutgoingResponse (OutgoingResponse))
 import OpenApiTH.Operation.OutgoingResponse qualified as OResp
 import OpenApiTH.Operation.Wai
+import OpenApiTH.Web
 
 declare ∷ (ToOptions opt, MonadFail m, Quote m) ⇒ opt → m [Dec]
 declare opt =

@@ -6,30 +6,25 @@ module OpenApiTH (
   operationWaiApplication,
   Operation (..),
   OperationServer,
-  localhost,
-  serverUrlQQ,
+  localhostPort,
+  resourceLocationQQ,
   assertHttpClientWarpExchange,
   OutgoingRequest (..),
   IncomingRequest (..),
   OutgoingResponse (..),
   IncomingResponse (..),
-  PathSegment (..),
-  Path (..),
   Message (..),
 
   -- * URLs
-  ServerUrl (..),
-  readServerUrl,
-  Hierarchy (..),
+  ResourceLocation (..),
+  readResourceLocation,
+  ResourceContext (..),
   Authority (..),
-  Path (..),
 ) where
 
-import Iri.Data (Path (..), PathSegment (..))
 import OpenApiTH.Declare.Declare
 import OpenApiTH.Declare.Options
 import OpenApiTH.Declare.OptionsBuilder
-import OpenApiTH.OpenApi.ResourceLocation
 import OpenApiTH.Operation.HttpClient
 import OpenApiTH.Operation.IncomingRequest
 import OpenApiTH.Operation.IncomingResponse
@@ -39,3 +34,4 @@ import OpenApiTH.Operation.OutgoingRequest
 import OpenApiTH.Operation.OutgoingResponse
 import OpenApiTH.Operation.Testing
 import OpenApiTH.Operation.Wai
+import OpenApiTH.Web

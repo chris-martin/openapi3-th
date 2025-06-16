@@ -1,7 +1,14 @@
 {-# OPTIONS_GHC -Wno-missing-fields #-}
 
 -- | Lax implementation of <https://www.rfc-editor.org/rfc/rfc3986>
-module OpenApiTH.OpenApi.ResourceLocation where
+module OpenApiTH.Web.ResourceLocation (
+  ResourceLocation (..),
+  ResourceContext (..),
+  Authority (..),
+  readResourceLocation,
+  resourceLocationQQ,
+  localhostPort,
+) where
 
 import Essentials
 
@@ -83,22 +90,26 @@ resourceLocationP = do
     asum @[] @Parser
       [ P.chunk "//" *> do
           AuthorityContext <$> do
-            authorityP <* P.lookAhead (void (P.single '/') <|> P.eof)
+            authorityP <* (void (P.single '/') <|> P.eof)
       , P.single '/' $> AbsoluteContext
       , pure RelativeContext
       ]
   path ←
-    P.takeWhileP
-      (Just "path character")
-      (\x → not $ List.elem @[] x "/?#")
-      `P.sepBy` P.single '/'
-  pure ResourceLocation {scheme, context}
+    asum @[] @Parser
+      [ Empty <$ P.eof
+      , fmap Seq.fromList $
+          P.takeWhileP
+            (Just "path character")
+            (\x → not $ List.elem @[] x "/?#")
+            `P.sepBy` P.single '/'
+      ]
+  pure ResourceLocation {scheme, context, path}
 
 schemeP ∷ Parser Text
 schemeP =
-  Text.cons
-    <$> P.satisfy (\x → Char.isAsciiLower x || Char.isAsciiUpper x)
-    <*> P.takeWhileP
+  fmap fst $ P.match $ do
+    P.satisfy (\x → Char.isAsciiLower x || Char.isAsciiUpper x)
+    P.takeWhileP
       (Just "scheme character")
       ( \x →
           Char.isAsciiLower x
@@ -109,7 +120,7 @@ schemeP =
 
 authorityP ∷ Parser Authority
 authorityP = do
-  userInfo ← P.optional userInfoP <* P.single '@'
+  userInfo ← P.optional $ P.try $ userInfoP <* P.single '@'
   host ← ipv6P <|> ipv4P <|> regNameP
   port ← P.optional $ P.single ':' *> P.decimal
   pure Authority {userInfo, host, port}
@@ -162,8 +173,8 @@ userInfoP =
           || List.elem @[] x "-._~!$&'()*+,;="
     )
 
-serverUrlQQ ∷ QuasiQuoter
-serverUrlQQ =
+resourceLocationQQ ∷ QuasiQuoter
+resourceLocationQQ =
   QuasiQuoter
     { quoteExp =
         either (fail . Text.unpack . Text.intercalate "\n") lift

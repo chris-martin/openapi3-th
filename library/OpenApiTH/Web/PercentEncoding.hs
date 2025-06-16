@@ -1,4 +1,7 @@
-module OpenApiTH.PercentEncoding where
+-- | From <https://www.rfc-editor.org/rfc/rfc3986>
+module OpenApiTH.Web.PercentEncoding (
+  percentDecodeUtf8,
+) where
 
 import Essentials
 

@@ -33,9 +33,13 @@ spec = describe "" do
     request ← buildOperationRequest @GetUsers ()
     request.head
       `shouldBe` OutgoingRequest
-        { server = Nothing
+        { location =
+            ResourceLocation
+              { scheme = Nothing
+              , context = AbsoluteContext
+              , path = ["users"]
+              }
         , method = "GET"
-        , path = Path [PathSegment "users"]
         , query = []
         , accept = "application/json"
         }

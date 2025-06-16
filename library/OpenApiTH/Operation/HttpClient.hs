@@ -44,6 +44,7 @@ import OpenApiTH.Operation.Operation
 import OpenApiTH.Operation.OutgoingRequest
 import OpenApiTH.Operation.OutgoingResponse
 import OpenApiTH.Operation.Wai
+import OpenApiTH.Web
 
 buildHttpClientRequest
   ∷ Message OutgoingRequest (ListT IO BSB.Builder) → IO HttpClient.Request
