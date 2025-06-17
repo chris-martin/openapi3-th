@@ -15,6 +15,7 @@ import Language.Haskell.TH qualified as TH
 import List.Transformer qualified as ListT
 import Network.HTTP.Simple
 import Network.Wai.Handler.Warp
+import Optics
 import System.IO (IO)
 import Prelude (fromIntegral, show)
 
@@ -26,22 +27,69 @@ spec = do
   it "" $
     readResourceLocation "https://api.example.com"
       `shouldBe` Right
-        ResourceLocation
-          { scheme = Just "https"
-          , context =
-              AuthorityContext
-                Authority
-                  { userInfo = Nothing
-                  , host = "api.example.com"
-                  , port = Nothing
-                  }
-          , path = Empty
-          }
-  it "" $ readResourceLocation "https://api.example.com:8443/v1/reports" `shouldBe` Right _
-  it "" $ readResourceLocation "http://localhost:3025/v1" `shouldBe` Right _
-  it "" $ readResourceLocation "http://10.0.81.36/v1" `shouldBe` Right _
-  it "" $ readResourceLocation "ws://api.example.com/v1" `shouldBe` Right _
-  it "" $ readResourceLocation "wss://api.example.com/v1" `shouldBe` Right _
-  it "" $ readResourceLocation "/v1/reports" `shouldBe` Right _
-  it "" $ readResourceLocation "/" `shouldBe` Right _
-  it "" $ readResourceLocation "//api.example.com" `shouldBe` Right _
+        ( mempty
+            & #scheme ?~ "https"
+            & #context
+              .~ AuthorityContext (hostAuthority "api.example.com")
+        )
+  it "" $
+    readResourceLocation "https://api.example.com:8443/v1/reports"
+      `shouldBe` Right
+        ( mempty
+            & #scheme ?~ "https"
+            & #context
+              .~ AuthorityContext
+                (hostAuthority "api.example.com" & #port ?~ 8443)
+            & #path .~ ["v1", "reports"]
+        )
+  it "" $
+    readResourceLocation "http://localhost:3025/v1"
+      `shouldBe` Right
+        ( mempty
+            & #scheme ?~ "http"
+            & #context
+              .~ AuthorityContext
+                (hostAuthority "localhost" & #port ?~ 3025)
+            & #path .~ ["v1"]
+        )
+  it "" $
+    readResourceLocation "http://10.0.81.36/v1"
+      `shouldBe` Right
+        ( mempty
+            & #scheme ?~ "http"
+            & #context .~ AuthorityContext (hostAuthority "10.0.81.36")
+            & #path .~ ["v1"]
+        )
+  it "" $
+    readResourceLocation "ws://api.example.com/v1"
+      `shouldBe` Right
+        ( mempty
+            & #scheme ?~ "ws"
+            & #context .~ AuthorityContext (hostAuthority "api.example.com")
+            & #path .~ ["v1"]
+        )
+  it "" $
+    readResourceLocation "wss://api.example.com/v1"
+      `shouldBe` Right
+        ( mempty
+            & #scheme ?~ "wss"
+            & #context .~ AuthorityContext (hostAuthority "api.example.com")
+            & #path .~ ["v1"]
+        )
+  it "" $
+    readResourceLocation "/v1/reports"
+      `shouldBe` Right
+        ( mempty
+            & #context .~ AbsoluteContext
+            & #path .~ ["v1", "reports"]
+        )
+  it "" $
+    readResourceLocation "/"
+      `shouldBe` Right
+        (mempty & #context .~ AbsoluteContext)
+  it "" $
+    readResourceLocation "//api.example.com"
+      `shouldBe` Right
+        ( mempty
+            & #context .~ AuthorityContext (hostAuthority "api.example.com")
+        )

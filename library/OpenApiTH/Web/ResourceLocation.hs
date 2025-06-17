@@ -8,6 +8,7 @@ module OpenApiTH.Web.ResourceLocation (
   readResourceLocation,
   resourceLocationQQ,
   localhostPort,
+  hostAuthority,
 ) where
 
 import Essentials
@@ -38,6 +39,7 @@ import GHC.Generics
 import Language.Haskell.TH.Quote
 import Language.Haskell.TH.Syntax
 import Numeric.Natural (Natural)
+import Optics.TH
 import Test.QuickCheck (Gen)
 import Test.QuickCheck qualified as QC
 import Test.QuickCheck.Arbitrary.Generic
@@ -69,6 +71,12 @@ data Authority = Authority
   , port ∷ Maybe Natural
   }
   deriving stock (Eq, Show, Lift, Generic)
+
+hostAuthority ∷ Text → Authority
+hostAuthority host = Authority {userInfo, host, port}
+ where
+  userInfo = Nothing
+  port = Nothing
 
 instance Arbitrary Authority where
   arbitrary = authorityG
@@ -297,3 +305,7 @@ localhostPort port =
             }
     , path = Empty
     }
+
+makeFieldLabelsNoPrefix ''ResourceLocation
+
+makeFieldLabelsNoPrefix ''Authority

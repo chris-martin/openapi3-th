@@ -20,6 +20,7 @@ module OpenApiTH (
   readResourceLocation,
   ResourceContext (..),
   Authority (..),
+  hostAuthority,
 ) where
 
 import OpenApiTH.Declare.Declare
