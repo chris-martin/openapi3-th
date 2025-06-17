@@ -16,7 +16,7 @@ cabal-files:
   find -maxdepth 1 -name '*.cabal'
 
 haskell-files:
-  find library examples test -name '*.hs' -print
+  find library examples properties test -name '*.hs' -print
 
 build packages='all':
   cabal build {{packages}} --ghc-options="{{ghc-options}}"

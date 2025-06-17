@@ -91,7 +91,7 @@ test-suite test
   import:         base
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
-  hs-source-dirs: test examples
+  hs-source-dirs: test examples properties
   build-depends:
     , base
     , bytestring
@@ -101,6 +101,7 @@ test-suite test
     , list-transformer
     , openapi3-th
     , quaalude
+    , QuickCheck
     , template-haskell
     , text
     , warp
@@ -109,3 +110,6 @@ test-suite test
   other-modules:
     OpenApiGuide.BasicStructure.Main
     OpenApiGuide.ServerUrlFormat
+
+  -- cabal-fmt: expand properties
+  other-modules:  Properties.ResourceLocation.Monoid

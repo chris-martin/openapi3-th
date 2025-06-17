@@ -77,9 +77,10 @@ instance Arbitrary Authority where
 instance Semigroup ResourceLocation where
   b <> r
     | Just {} ← r.scheme = r
-    | AuthorityContext {} ← r.context =
-        ResourceLocation {scheme = b.scheme, context = r.context, path = r.path}
-    | Empty ← r.path = b
+    | AuthorityContext {} ← r.context = r {scheme = b.scheme}
+    | RelativeContext ← b.context
+    , AbsoluteContext ← r.context =
+        b {path = r.path, context = r.context}
     | AbsoluteContext ← r.context = b {path = r.path}
     | RelativeContext ← r.context = b {path = b.path <> r.path}
 
