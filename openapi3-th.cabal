@@ -37,6 +37,7 @@ library
     , conduit
     , containers
     , filepath
+    , generic-arbitrary
     , hspec
     , http-client
     , http-conduit
@@ -46,6 +47,7 @@ library
     , monad-validate
     , optics
     , quaalude
+    , QuickCheck
     , template-haskell
     , text
     , transformers
