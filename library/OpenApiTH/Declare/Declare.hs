@@ -94,27 +94,6 @@ declare opt =
                         Nothing → _
                         Just r → pure r
                   ]
-                  -- buildOperationResponse xs =
-                  --   pure $
-                  --     Wai.responseLBS
-                  --       Http.ok200
-                  --       [(Http.hContentType, "application/json")]
-                  --       (JSON.encode xs)
-                  -- readOperationResponse rr = do
-                  --   let headers = HttpClient.responseHeaders httpClientResponse
-                  --       contentTypeMaybe = List.lookup Http.hContentType headers
-                  --       statusCode = Http.statusCode $ HttpClient.responseStatus httpClientResponse
-                  --   case statusCode of
-                  --     200 → case contentTypeMaybe of
-                  --       Just "application/json" → do
-                  --         body ←
-                  --           Conduit.runConduit $
-                  --             HttpClient.responseBody httpClientResponse Conduit..| Conduit.sinkLazy
-                  --         case JSON.decode body of
-                  --           Nothing → _
-                  --           Just response → pure response
-                  --       _ → _
-                  --     _ → _
           |]
  where
   Options {specFile, operations} = toOptions opt
