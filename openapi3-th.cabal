@@ -110,6 +110,7 @@ test-suite test
   -- cabal-fmt: expand examples
   other-modules:
     OpenApiGuide.BasicStructure.Main
+    OpenApiGuide.MediaTypes.Main
     OpenApiGuide.ServerUrlFormat
 
   -- cabal-fmt: expand properties

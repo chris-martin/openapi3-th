@@ -4,20 +4,22 @@ paths:
     get:
       summary: Returns a list of employees.
       responses:
-        "200": # Response
+        "200":
           description: OK
-          content: # Response body
-            application/json: # Media type
-              schema: # Must-have
-                type: object # Data type
-                properties:
-                  id:
-                    type: integer
-                  name:
-                    type: string
-                  fullTime:
-                    type: boolean
-                example: # Sample data
-                  id: 1
-                  name: Jessica Right
-                  fullTime: true
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    name:
+                      type: string
+                    fullTime:
+                      type: boolean
+                  example:
+                    id: 1
+                    name: Jessica Right
+                    fullTime: true
