@@ -17,9 +17,21 @@ import Prelude (fromIntegral, show)
 
 import OpenApiTH
 
-declare $
-  specFile "examples/OpenApiGuide/MediaTypes/openapi1.yaml"
-    <> operation ("get /employees" & setOperationName "GetEmployees")
+declare
+  Options
+    { specFile = "examples/OpenApiGuide/MediaTypes/openapi1.yaml"
+    , declarations = ["GetEmployees", "Employee"]
+    , annotations =
+        [
+          ( ["paths", "/employees", "get"]
+          , Annotation {name = "GetEmployees"}
+          )
+        ,
+          ( ["paths", "/employees", "get", "responses", "200", "content", "application/json", "schema", "items"]
+          , Annotation {name = "Employee"}
+          )
+        ]
+    }
 
 server ∷ OperationServer GetEmployees IO
 server () =

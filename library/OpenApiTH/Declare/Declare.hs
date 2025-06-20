@@ -42,11 +42,11 @@ import OpenApiTH.Operation.OutgoingResponse qualified as OResp
 import OpenApiTH.Operation.Wai
 import OpenApiTH.Web
 
-declare ∷ (ToOptions opt, MonadFail m, Quote m) ⇒ opt → m [Dec]
-declare opt =
+declare ∷ (MonadFail m, Quote m) ⇒ Options → m [Dec]
+declare Options {specFile, annotations, declarations} =
   fmap fst $ runYieldT listAggregation do
-    for_ operations \op → do
-      name ← lift $ maybe (fail "todo") (pure . TH.mkName . Text.unpack) op.name
+    for_ declarations \nameText → do
+      name ← lift $ pure $ TH.mkName $ Text.unpack nameText
       yieldM $ dataD (cxt []) name [] Nothing [] []
       yieldManyM
         [d|
@@ -95,8 +95,6 @@ declare opt =
                         Just r → pure r
                   ]
           |]
- where
-  Options {specFile, operations} = toOptions opt
 
 yieldM ∷ Monad m ⇒ m a → YieldT a m ()
 yieldM x = yield =<< lift x

@@ -65,7 +65,6 @@ library
     OpenApiTH
     OpenApiTH.Declare.Declare
     OpenApiTH.Declare.Options
-    OpenApiTH.Declare.OptionsBuilder
     OpenApiTH.OpenApi
     OpenApiTH.OpenApi.DataType
     OpenApiTH.OpenApi.ReadSpecFile

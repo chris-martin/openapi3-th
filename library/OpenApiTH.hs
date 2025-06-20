@@ -1,8 +1,7 @@
 module OpenApiTH (
   declare,
-  specFile,
-  operation,
-  setOperationName,
+  Options (..),
+  Annotation (..),
   operationWaiApplication,
   Operation (..),
   OperationServer,
@@ -25,7 +24,6 @@ module OpenApiTH (
 
 import OpenApiTH.Declare.Declare
 import OpenApiTH.Declare.Options
-import OpenApiTH.Declare.OptionsBuilder
 import OpenApiTH.Operation.HttpClient
 import OpenApiTH.Operation.IncomingRequest
 import OpenApiTH.Operation.IncomingResponse

@@ -17,9 +17,12 @@ import Prelude (fromIntegral, show)
 
 import OpenApiTH
 
-declare $
-  specFile "examples/OpenApiGuide/BasicStructure/openapi.yaml"
-    <> operation ("get /users" & setOperationName "GetUsers")
+declare
+  Options
+    { specFile = "examples/OpenApiGuide/BasicStructure/openapi.yaml"
+    , declarations = ["GetUsers"]
+    , annotations = [(["paths", "/users", "get"], Annotation {name = "GetUsers"})]
+    }
 
 server ∷ OperationServer GetUsers IO
 server () = pure ["AJ", "Pat"]

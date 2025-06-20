@@ -2,6 +2,7 @@ module OpenApiTH.Declare.Options where
 
 import Essentials
 
+import Data.Map.Strict (Map)
 import Data.Sequence (Seq (..))
 import Data.String
 import Data.Text (Text)
@@ -9,34 +10,13 @@ import Data.Text qualified as Text
 import System.IO (FilePath)
 import Prelude (error)
 
+import OpenApiTH.OpenApi
+
 data Options = Options
-  { specFile ∷ Maybe FilePath
-  , operations ∷ Seq OperationOptions
+  { specFile ∷ FilePath
+  , declarations ∷ Seq Text
+  , annotations ∷ Map SpecPath Annotation
   }
 
-data OperationOptions = OperationOptions
-  { method ∷ Text
-  , path ∷ Text
-  , name ∷ Maybe Text
-  }
-
-setOperationName ∷ Text → OperationOptions → OperationOptions
-setOperationName n o = o {name = Just n}
-
-instance IsString OperationOptions where
-  fromString s = case Text.words (Text.pack s) of
-    [method, path] → OperationOptions {method, path, name = Nothing}
-    _ → error "No parse"
-
-class ToOptions a where
-  toOptions ∷ a → Options
-
-instance ToOptions Options where
-  toOptions = id
-
-defaultOptions ∷ Options
-defaultOptions =
-  Options
-    { specFile = Nothing
-    , operations = Empty
-    }
+data Annotation
+  = Annotation {name ∷ Text}
