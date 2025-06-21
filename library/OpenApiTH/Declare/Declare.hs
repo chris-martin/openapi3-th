@@ -5,6 +5,7 @@ import Essentials
 import Conduit qualified
 import Control.Applicative (empty)
 import Control.Monad.Fail
+import Control.Monad.State.Strict
 import Control.Monad.Trans.Class
 import Control.Monad.Yield
 import Data.Aeson qualified as JSON
@@ -42,8 +43,9 @@ import OpenApiTH.Operation.OutgoingResponse qualified as OResp
 import OpenApiTH.Operation.Wai
 import OpenApiTH.Web
 
-declare ∷ (MonadFail m, Quote m) ⇒ Options → m [Dec]
-declare Options {specFile, annotations, declarations} =
+oath ∷ (MonadFail m, Quote m) ⇒ OptionsM () → m [Dec]
+oath optionsM = do
+  let Options {specFile, declarations, dubs} = execOptionsM optionsM
   fmap fst $ runYieldT listAggregation do
     for_ declarations \nameText → do
       name ← lift $ pure $ TH.mkName $ Text.unpack nameText

@@ -1,6 +1,9 @@
 module OpenApiTH (
-  declare,
+  oath,
   Options (..),
+  useSpecFile,
+  declare,
+  dub,
   Annotation (..),
   operationWaiApplication,
   Operation (..),

@@ -14,9 +14,7 @@ import Data.Yaml qualified as YAML
 import System.FilePath qualified as FilePath
 import System.IO
 
-import OpenApiTH.OpenApi.Spec
-
-readSpecFile ∷ FilePath → IO Spec
+readSpecFile ∷ FilePath → IO JSON.Value
 readSpecFile file = do
   let ext = FilePath.takeExtension file
   when (null ext) $ fail "No file extension"
@@ -36,16 +34,16 @@ extensionFormatMap =
     , (".yml", YAML)
     ]
 
-readSpecFileJson ∷ FilePath → IO Spec
+readSpecFileJson ∷ FilePath → IO JSON.Value
 readSpecFileJson file = do
   result ← JSON.eitherDecodeFileStrict file
   case result of
     Left err → fail err
-    Right value → pure Spec {value}
+    Right value → pure value
 
-readSpecFileYaml ∷ FilePath → IO Spec
+readSpecFileYaml ∷ FilePath → IO JSON.Value
 readSpecFileYaml file = do
   result ← YAML.decodeFileEither file
   case result of
     Left err → fail $ YAML.prettyPrintParseException err
-    Right value → pure Spec {value}
+    Right value → pure value

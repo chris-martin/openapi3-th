@@ -22,6 +22,7 @@ common base
     OverloadedStrings
     PartialTypeSignatures
     QuasiQuotes
+    StrictData
     TemplateHaskell
     TypeFamilies
     UndecidableInstances
@@ -45,6 +46,7 @@ library
     , list-transformer
     , megaparsec
     , monad-validate
+    , mtl
     , optics
     , quaalude
     , QuickCheck
@@ -68,10 +70,7 @@ library
     OpenApiTH.OpenApi
     OpenApiTH.OpenApi.DataType
     OpenApiTH.OpenApi.ReadSpecFile
-    OpenApiTH.OpenApi.ResolveSpecPath
     OpenApiTH.OpenApi.Schema
-    OpenApiTH.OpenApi.Spec
-    OpenApiTH.OpenApi.SpecPath
     OpenApiTH.Operation.HttpClient
     OpenApiTH.Operation.IncomingRequest
     OpenApiTH.Operation.IncomingResponse
@@ -81,8 +80,11 @@ library
     OpenApiTH.Operation.OutgoingResponse
     OpenApiTH.Operation.Testing
     OpenApiTH.Operation.Wai
+    OpenApiTH.Relation
     OpenApiTH.Web
     OpenApiTH.Web.BasicAuthentication
+    OpenApiTH.Web.JsonPointer
+    OpenApiTH.Web.JsonReference
     OpenApiTH.Web.PercentEncoding
     OpenApiTH.Web.ResourceLocation
 

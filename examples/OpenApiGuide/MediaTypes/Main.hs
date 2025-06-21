@@ -17,21 +17,13 @@ import Prelude (fromIntegral, show)
 
 import OpenApiTH
 
-declare
-  Options
-    { specFile = "examples/OpenApiGuide/MediaTypes/openapi1.yaml"
-    , declarations = ["GetEmployees", "Employee"]
-    , annotations =
-        [
-          ( ["paths", "/employees", "get"]
-          , Annotation {name = "GetEmployees"}
-          )
-        ,
-          ( ["paths", "/employees", "get", "responses", "200", "content", "application/json", "schema", "items"]
-          , Annotation {name = "Employee"}
-          )
-        ]
-    }
+oath do
+  declare "GetEmployees"
+  withSpecFile "examples/OpenApiGuide/MediaTypes/openapi1.yaml" do
+    atJsonPath ["paths", "/employees", "get"] do
+      dub "GetEmployees"
+      atJsonPath ["responses", "200", "content", "application/json", "schema"] do
+        atJsonPath "items" $ dub "Employee"
 
 server ∷ OperationServer GetEmployees IO
 server () =
