@@ -20,7 +20,7 @@ import OpenApiTH
 oath do
   declare ["GetUsers"]
   withSpecFile "examples/OpenApiGuide/BasicStructure/openapi.yaml" do
-    at ["paths" , "/users" , "/get"] $ dub "GetUsers"
+    at ["paths", "/users", "/get"] $ dub "GetUsers"
 
 server ∷ OperationServer GetUsers IO
 server () = pure ["AJ", "Pat"]
