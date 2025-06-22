@@ -53,6 +53,7 @@ import OpenApiTH.Web.ResourceContext
 import OpenApiTH.Web.Scheme
 import OpenApiTH.Web.UserInfo
 
+-- | todo: Remodel this as "UriReference without a query or fragment"
 data ResourceLocation = ResourceLocation
   { scheme ∷ Maybe Text
   , context ∷ ResourceContext

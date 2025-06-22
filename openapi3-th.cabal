@@ -89,9 +89,12 @@ library
     OpenApiTH.Web.JsonReference
     OpenApiTH.Web.Path
     OpenApiTH.Web.PercentEncoding
+    OpenApiTH.Web.RelativeReference
     OpenApiTH.Web.ResourceContext
     OpenApiTH.Web.ResourceLocation
     OpenApiTH.Web.Scheme
+    OpenApiTH.Web.Uri
+    OpenApiTH.Web.UriReference
     OpenApiTH.Web.UserInfo
 
 test-suite test
