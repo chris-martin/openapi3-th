@@ -92,7 +92,6 @@ instance Semigroup ResourceLocation where
     | AbsoluteContext ← r.context = b {path = r.path}
     | RelativeContext ← r.context = b {path = b.path <> r.path}
 
--- todo: test for lawfulness
 instance Monoid ResourceLocation where
   mempty = ResourceLocation {scheme = Nothing, context = RelativeContext, path = Empty}
 
