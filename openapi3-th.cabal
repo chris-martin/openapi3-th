@@ -4,6 +4,7 @@ version:       0
 data-files:    examples/**/*.yaml
 
 common base
+  ghc-options:        -fconstraint-solver-iterations=5
   default-language:   GHC2021
   default-extensions:
     AllowAmbiguousTypes
@@ -92,6 +93,7 @@ library
     OpenApiTH.Web.RelativeReference
     OpenApiTH.Web.ResourceContext
     OpenApiTH.Web.ResourceLocation
+    OpenApiTH.Web.Rfc3986
     OpenApiTH.Web.Scheme
     OpenApiTH.Web.Uri
     OpenApiTH.Web.UriReference

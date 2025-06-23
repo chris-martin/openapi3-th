@@ -44,13 +44,12 @@ import OpenApiTH.Web.ResourceContext
 import OpenApiTH.Web.Scheme
 import OpenApiTH.Web.UserInfo
 
-data RelativeReference =
-  RelativeReference
-    { relativePart :: RelativePart
-    , query :: Maybe Text
-    , fragment :: Maybe Text
-    }
+data RelativeReference
+  = RelativeReference
+  { relativePart ∷ RelativePart
+  , query ∷ Maybe Text
+  , fragment ∷ Maybe Text
+  }
 
-data RelativePart =
-  RelativePartAuthority Authority
-  | ...
+data RelativePart
+  = RelativePartAuthority Authority
