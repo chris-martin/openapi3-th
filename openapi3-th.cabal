@@ -68,6 +68,7 @@ library
     OpenApiTH
     OpenApiTH.Declare.Declare
     OpenApiTH.Declare.Options
+    OpenApiTH.Grammar
     OpenApiTH.OpenApi
     OpenApiTH.OpenApi.DataType
     OpenApiTH.OpenApi.ReadSpecFile
@@ -93,6 +94,7 @@ library
     OpenApiTH.Web.RelativeReference
     OpenApiTH.Web.ResourceContext
     OpenApiTH.Web.ResourceLocation
+    OpenApiTH.Web.Rfc2234
     OpenApiTH.Web.Rfc3986
     OpenApiTH.Web.Scheme
     OpenApiTH.Web.Uri
