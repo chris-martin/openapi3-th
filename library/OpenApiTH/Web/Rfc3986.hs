@@ -38,8 +38,12 @@ import Text.Megaparsec (Parsec)
 import Text.Megaparsec qualified as P
 import Text.Megaparsec.Char.Lexer qualified as P
 import Text.Show (show)
-import Prelude (fromIntegral)
+import Prelude (fromIntegral, (+))
 
+import Data.Bits (shiftL, shiftR, (.&.))
+import Data.Foldable (fold)
+import Data.Text.Lazy qualified as TL
+import Data.Text.Lazy.Builder qualified as TB
 import OpenApiTH.Grammar
 import OpenApiTH.Web.Rfc2234
 
@@ -147,14 +151,33 @@ newtype Scheme = SchemeUnsafe Text
 instance Grammar Scheme where
   parser = P.label "scheme" $ fmap (SchemeUnsafe . fst) $ P.match do
     parser @Alpha
-    P.takeWhileP Nothing $ isAlpha `or` isDigit `or` inCharset "+-."
+    P.many $
+      asum @[]
+        [ void $ parser @Alpha
+        , void $ parser @DigitChar
+        , void $ parser @SchemeSymbol
+        ]
 
 instance Arbitrary Scheme where
   arbitrary =
     fmap (SchemeUnsafe . Text.pack) $
       (:)
-        <$> alphaGen
-        <*> QC.listOf (QC.oneof [alphaGen, digitGen, QC.elements "+-."])
+        <$> ((.char) <$> arbitrary @Alpha)
+        <*> QC.listOf
+          ( QC.oneof
+              [ (.char) <$> arbitrary @Alpha
+              , (.char) <$> arbitrary @DigitChar
+              , (.char) <$> arbitrary @SchemeSymbol
+              ]
+          )
+
+newtype SchemeSymbol = SchemeSymbolUnsafe {char ∷ Char}
+  deriving Arbitrary via Enumerated SchemeSymbol
+  deriving Grammar via Enumerated SchemeSymbol
+  deriving IsChar via CoercedChar SchemeSymbol
+
+instance Enumerable SchemeSymbol where
+  enumerate = "+-."
 
 data Authority = Authority
   { userinfo ∷ Maybe Userinfo
@@ -177,20 +200,20 @@ instance Grammar Userinfo where
   parser = P.label "userinfo" $ fmap (UserinfoUnsafe . fst) $ P.match do
     P.many $
       asum @[]
-        [ void unreservedParser
-        , void pctEncodedParser
-        , void subDelimsParser
+        [ void $ parser @Unreserved
+        , void $ parser @PctEncoded
+        , void $ parser @SubDelim
         , void $ P.single ':'
         ]
 
 instance Arbitrary Userinfo where
   arbitrary =
-    fmap (UserinfoUnsafe . Text.concat) $
+    fmap (UserinfoUnsafe . TL.toStrict . TB.toLazyText . fold) $
       QC.listOf $
         QC.oneof
-          [ Text.singleton <$> unreservedGen
-          , pctEncodedGen
-          , Text.singleton <$> subDelimsGen
+          [ render <$> arbitrary @Unreserved
+          , render <$> arbitrary @PctEncoded
+          , render <$> arbitrary @SubDelim
           , pure ":"
           ]
 
@@ -202,6 +225,10 @@ data Host
   deriving Arbitrary via GenericArbitrary Host
 
 instance Grammar Host where
+  render = \case
+    Host_IpLiteral x → render x
+    Host_Ipv4 x → render x
+    Host_RegName x → render x
   parser =
     P.label "host" $
       asum @[]
@@ -213,10 +240,19 @@ instance Grammar Host where
 newtype Port = PortUnsafe Text
 
 instance Grammar Port where
-  parser = P.label "port" $ fmap (PortUnsafe . fst) $ P.match $ P.many digitParser
+  parser =
+    P.label "port" $
+      fmap (PortUnsafe . fst) $
+        P.match $
+          P.many $
+            parser @DigitChar
 
 instance Arbitrary Port where
-  arbitrary = PortUnsafe . Text.pack <$> QC.listOf digitGen
+  arbitrary =
+    fmap (PortUnsafe . Text.pack) $
+      QC.listOf $
+        fmap (.char) $
+          arbitrary @DigitChar
 
 data IpLiteral
   = IpLiteral_V6 Ipv6Address
@@ -239,14 +275,25 @@ newtype IpvFuture = IpvFutureUnsafe Text
 instance Grammar IpvFuture where
   parser = P.label "IPvFuture" $ fmap (IpvFutureUnsafe . fst) $ P.match do
     P.single 'v'
-    hexdigParser
+    parser @Hexdig
     P.single '.'
-    P.takeWhile1P Nothing $ isUnreserved `or` isSubDelims `or` (== ':')
+    P.many $
+      asum @[]
+        [ void $ parser @Unreserved
+        , void $ parser @SubDelim
+        , void $ P.single ':'
+        ]
 
 instance Arbitrary IpvFuture where
   arbitrary = do
-    x ← hexdigGen
-    xs ← QC.listOf1 $ QC.oneof [unreservedGen, subDelimsGen, pure ':']
+    x ← hexdigChar <$> arbitrary @Hexdig
+    xs ←
+      QC.listOf1 $
+        QC.oneof
+          [ (.char) <$> arbitrary @Unreserved
+          , (.char) <$> arbitrary @SubDelim
+          , pure ':'
+          ]
     pure $ IpvFutureUnsafe $ Text.pack $ ['v', x, '.'] <> xs
 
 newtype Ipv6Address = Ipv6AddressUnsafe Text
@@ -338,44 +385,52 @@ instance Grammar Fragment
 
 instance Arbitrary Fragment
 
-newtype PctEncoded = PctEncoded Text
+newtype PctEncoded = PctEncoded {byte ∷ Word8}
+  deriving newtype Arbitrary
 
 instance Grammar PctEncoded where
-  parser = P.label "pct-encoded" $ fmap (PctEncoded . fst) $ P.match $ do
+  render x =
+    TB.singleton '%'
+      <> render (HexdigUnsafe $ x.byte `shiftR` 4)
+      <> render (HexdigUnsafe $ x.byte .&. 15)
+  parser = P.label "pct-encoded" $ do
     P.single '%'
-    replicateM_ 2 $ parser @Hexdig
+    HexdigUnsafe a ← parser
+    HexdigUnsafe b ← parser
+    pure $ PctEncoded $ (a `shiftL` 4) + b
 
-instance Arbitrary PctEncoded where
-  arbitrary =
-    fmap (PctEncoded . Text.pack . ('%' :)) $
-      replicateM 2 $
-        fmap (\(HexdigUnsafe x) → x) $
-          arbitrary @Hexdig
-
-newtype Unreserved = UnreservedUnsafe Char
+newtype Unreserved = UnreservedUnsafe {char ∷ Char}
 
 instance Grammar Unreserved where
+  render = TB.singleton . (.char)
   parser =
     P.label "unreserved" $
       fmap UnreservedUnsafe $
         asum @[]
-          [ (\(AlphaUnsafe x) → x) <$> parser
-          , (\(DigitUnsafe x) → x) <$> parser
-          , P.satisfy "-._~"
+          [ (.char) <$> parser @Alpha
+          , (.char) <$> parser @DigitChar
+          , (.char) <$> parser @UnreservedSymbol
           ]
 
 instance Arbitrary Unreserved where
   arbitrary =
     fmap UnreservedUnsafe $
       QC.oneof
-        [ (\(AlphaUnsafe x) → x) <$> arbitrary
-        , (\(DigitUnsafe x) → x) <$> arbitrary
-        , QC.elements "-._~"
+        [ (.char) <$> arbitrary @Alpha
+        , (.char) <$> arbitrary @DigitChar
+        , (.char) <$> arbitrary @UnreservedSymbol
         ]
 
-newtype Reserved = ReservedUnsafe Char
- deriving IsChar via CoercedChar Reserved
- deriving Grammar via Named "reserved" (Tested Reserved)
+newtype UnreservedSymbol = UnreservedSymbolUnsafe {char ∷ Char}
+  deriving (Arbitrary, Grammar) via Enumerated UnreservedSymbol
+  deriving IsChar via CoercedChar UnreservedSymbol
+
+instance Enumerable UnreservedSymbol where
+  enumerate = "-._~"
+
+newtype Reserved = ReservedUnsafe {char ∷ Char}
+  deriving IsChar via CoercedChar Reserved
+  deriving Grammar via Named "reserved" (Tested Reserved)
 
 instance Testable Reserved where
   charIs x = charIs @GenDelim x || charIs @SubDelim x
@@ -388,19 +443,18 @@ instance Arbitrary Reserved where
         , (\(SubDelimUnsafe x) → x) <$> arbitrary
         ]
 
-newtype GenDelim = GenDelimUnsafe Char
-  deriving Arbitrary via Enumerated GenDelim
+newtype GenDelim = GenDelimUnsafe {char ∷ Char}
+  deriving (Arbitrary, Testable) via Enumerated GenDelim
   deriving Grammar via Named "gen-delims" GenDelim
   deriving IsChar via CoercedChar GenDelim
 
 instance Enumerable GenDelim where
   enumerate = ":/?#[]@"
 
-newtype SubDelim = SubDelimUnsafe Char
-  deriving Arbitrary via Enumerated SubDelim
+newtype SubDelim = SubDelimUnsafe {char ∷ Char}
+  deriving (Arbitrary, Testable) via Enumerated SubDelim
   deriving Grammar via Named "sub-delims" SubDelim
   deriving IsChar via CoercedChar SubDelim
-
 
 instance Enumerable SubDelim where
   enumerate = "!$&'()*+,;="

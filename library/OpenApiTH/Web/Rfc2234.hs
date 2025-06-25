@@ -37,13 +37,14 @@ import Text.Megaparsec (Parsec)
 import Text.Megaparsec qualified as P
 import Text.Megaparsec.Char.Lexer qualified as P
 import Text.Show (show)
-import Prelude (fromIntegral)
+import Prelude (Num ((+), (-)), fromIntegral)
 
+import Data.Text.Lazy.Builder qualified as TB
 import OpenApiTH.Grammar
 
-newtype Alpha = AlphaUnsafe Char
- deriving Grammar via Named "ALPHA" (Tested Alpha)
- deriving IsChar via CoercedChar Alpha
+newtype Alpha = AlphaUnsafe {char ∷ Char}
+  deriving Grammar via Named "ALPHA" (Tested Alpha)
+  deriving IsChar via CoercedChar Alpha
 
 instance Testable Alpha where
   charIs x =
@@ -58,34 +59,80 @@ instance Arbitrary Alpha where
         , QC.choose ('A', 'Z')
         ]
 
-newtype Digit = DigitUnsafe Char
-  deriving Grammar via Named "DIGIT" (Tested Digit)
-  deriving IsChar via CoercedChar Digit
+newtype DigitChar = DigitCharUnsafe {char ∷ Char}
+  deriving Grammar via Named "DIGIT" (Tested DigitChar)
+  deriving IsChar via CoercedChar DigitChar
 
-instance Testable Digit where
-  charIs x =     x >= '0' && x <= '9'
+instance Testable DigitChar where
+  charIs x = x >= '0' && x <= '9'
 
-instance Arbitrary Digit where
-  arbitrary = fmap DigitUnsafe $ QC.choose ('0', '9')
+instance Arbitrary DigitChar where
+  arbitrary = fmap DigitCharUnsafe $ QC.choose ('0', '9')
 
-newtype Hexdig = HexdigUnsafe Char
-  deriving Grammar via Named "HEXDIG" (Tested Hexdig)
-  deriving IsChar via CoercedChar Hexdig
+newtype DigitNum = DigitNumUnsafe {byte ∷ Word8}
+
+instance Grammar DigitNum where
+  render x = TB.singleton $ Char.chr $ Char.ord '0' + fromIntegral x.byte
+  parser =
+    P.label "DIGIT"
+      $ fmap
+        ( \x →
+            DigitNumUnsafe $ fromIntegral $ Char.ord x.char - Char.ord '0'
+        )
+      $ parser @DigitChar
+
+instance Arbitrary DigitNum where
+  arbitrary = fmap DigitNumUnsafe $ QC.choose (0, 9)
+
+newtype Hexdig = HexdigUnsafe {byte ∷ Word8}
+
+hexdigChar ∷ Hexdig → Char
+hexdigChar x =
+  Char.chr $
+    Char.ord (if x.byte < 10 then '0' else 'A') + fromIntegral x.byte
+
+instance Grammar Hexdig where
+  render = TB.singleton . hexdigChar
+  parser =
+    P.label "HEXDIG" $
+      fmap HexdigUnsafe $
+        asum @[]
+          [ (.byte) <$> parser @DigitNum
+          , (.byte) <$> parser @HexLetter
+          ]
 
 instance Testable Hexdig where
-  charIs x = charIs @Digit x || charIs @HexLetter x
+  charIs x = charIs @DigitChar x || charIs @HexLetter x
 
 instance Arbitrary Hexdig where
   arbitrary =
     fmap HexdigUnsafe $
       QC.frequency
-        [ (10, (\(DigitUnsafe x) → x) <$> arbitrary)
-        , (6, (\(HexLetterUnsafe x) → x) <$> arbitrary)
+        [ (10, (.byte) <$> arbitrary @DigitNum)
+        , (6, (.byte) <$> arbitrary @HexLetter)
         ]
 
-newtype HexLetter = HexLetterUnsafe Char
-  deriving Grammar via Tested HexLetter
-  deriving IsChar via CoercedChar HexLetter
+newtype HexLetter = HexLetterUnsafe {byte ∷ Word8}
+
+instance Grammar HexLetter where
+  render x =
+    TB.singleton $
+      Char.chr $
+        Char.ord 'A' + fromIntegral x.byte
+  parser =
+    fmap HexLetterUnsafe $
+      asum @[]
+        [ z 'A' 'F'
+        , z 'a' 'f'
+        ]
+   where
+    z a f = fmap
+      ( \x →
+          fromIntegral $
+            Char.ord x - Char.ord a + 10
+      )
+      $ P.satisfy
+      $ \x → x >= a && x <= f
 
 instance Testable HexLetter where
   charIs x =
@@ -95,7 +142,4 @@ instance Testable HexLetter where
 instance Arbitrary HexLetter where
   arbitrary =
     fmap HexLetterUnsafe $
-      QC.oneof
-        [ QC.choose ('A', 'F')
-        , QC.choose ('a', 'f')
-        ]
+      QC.choose (10, 15)
