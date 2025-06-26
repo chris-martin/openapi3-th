@@ -41,7 +41,7 @@ import Text.Show (show)
 import Prelude (fromIntegral, (+))
 
 import Data.Bits (shiftL, shiftR, (.&.))
-import Data.Foldable (fold)
+import Data.Foldable (fold, foldMap)
 import Data.Text.Lazy qualified as TL
 import Data.Text.Lazy.Builder qualified as TB
 import OpenApiTH.Grammar
@@ -57,6 +57,12 @@ data Uri = Uri
   deriving Arbitrary via GenericArbitrary Uri
 
 instance Grammar Uri where
+  render x =
+    render x.scheme
+      <> ":"
+      <> render x.hierPart
+      <> foldMap (\q → "?" <> render q) x.query
+      <> foldMap (\f → "#" <> render f) x.fragment
   parser = P.label "URI" do
     scheme ← parser
     P.single ':'
@@ -74,6 +80,11 @@ data HierPart
   deriving Arbitrary via GenericArbitrary HierPart
 
 instance Grammar HierPart where
+  render = \case
+    HierPart_Authority a p → "//" <> render a <> render p
+    HierPart_Absolute p → render p
+    HierPart_Rootless p → render p
+    HierPart_Empty p → render p
   parser =
     P.label "hier-part" $
       asum @[]
@@ -90,6 +101,9 @@ data UriReference
   deriving Arbitrary via GenericArbitrary UriReference
 
 instance Grammar UriReference where
+  render = \case
+    UriReference_Uri x → render x
+    UriReference_RelativeRef x → render x
   parser =
     P.label "URI-reference" $
       asum @[]
@@ -106,6 +120,11 @@ data AbsoluteUri = AbsoluteUri
   deriving Arbitrary via GenericArbitrary AbsoluteUri
 
 instance Grammar AbsoluteUri where
+  render x =
+    render x.scheme
+      <> ":"
+      <> render x.hierPart
+      <> foldMap (\q → "?" <> render q) x.query
   parser = P.label "absolute-URI" do
     scheme ← parser
     P.single ':'
@@ -122,6 +141,10 @@ data RelativeRef = RelativeRef
   deriving Arbitrary via GenericArbitrary RelativeRef
 
 instance Grammar RelativeRef where
+  render x =
+    render x.relativePart
+      <> foldMap (\q → "?" <> render q) x.query
+      <> foldMap (\f → "#" <> render f) x.fragment
   parser = P.label "relative-ref" do
     relativePart ← parser
     query ← P.optional $ P.single '?' *> parser
@@ -137,6 +160,11 @@ data RelativePart
   deriving Arbitrary via GenericArbitrary RelativePart
 
 instance Grammar RelativePart where
+  render = \case
+    RelativePart_Authority a p → "//" <> render a <> render p
+    RelativePart_Absolute p → render p
+    RelativePart_Noscheme p → render p
+    RelativePart_Empty p → render p
   parser =
     P.label "relative-part" $
       asum @[]
@@ -146,9 +174,10 @@ instance Grammar RelativePart where
         , RelativePart_Empty <$> parser
         ]
 
-newtype Scheme = SchemeUnsafe Text
+newtype Scheme = SchemeUnsafe {text ∷ Text}
 
 instance Grammar Scheme where
+  render x = TB.fromText x.text
   parser = P.label "scheme" $ fmap (SchemeUnsafe . fst) $ P.match do
     parser @Alpha
     P.many $
@@ -188,15 +217,20 @@ data Authority = Authority
   deriving Arbitrary via GenericArbitrary Authority
 
 instance Grammar Authority where
+  render x =
+    foldMap (\u → render u <> "@") x.userinfo
+      <> render x.host
+      <> foldMap (\p → ":" <> render p) x.port
   parser = P.label "authority" do
     userinfo ← P.optional $ P.try $ parser <* P.single '@'
     host ← parser
     port ← P.optional $ P.single ':' *> parser
     pure Authority {userinfo, host, port}
 
-newtype Userinfo = UserinfoUnsafe Text
+newtype Userinfo = UserinfoUnsafe {text ∷ Text}
 
 instance Grammar Userinfo where
+  render x = TB.fromText x.text
   parser = P.label "userinfo" $ fmap (UserinfoUnsafe . fst) $ P.match do
     P.many $
       asum @[]
@@ -237,9 +271,10 @@ instance Grammar Host where
         , Host_RegName <$> parser
         ]
 
-newtype Port = PortUnsafe Text
+newtype Port = PortUnsafe {text ∷ Text}
 
 instance Grammar Port where
+  render x = TB.fromText x.text
   parser =
     P.label "port" $
       fmap (PortUnsafe . fst) $
@@ -261,6 +296,13 @@ data IpLiteral
   deriving Arbitrary via GenericArbitrary IpLiteral
 
 instance Grammar IpLiteral where
+  render x =
+    "["
+      <> ( case x of
+            IpLiteral_V6 x → render x
+            IpLiteral_Future x → render x
+         )
+      <> "]"
   parser =
     P.label "IP-literal" $
       P.single '['
@@ -270,12 +312,13 @@ instance Grammar IpLiteral where
           ]
         <* P.single ']'
 
-newtype IpvFuture = IpvFutureUnsafe Text
+newtype IpvFuture = IpvFutureUnsafe {text ∷ Text}
 
 instance Grammar IpvFuture where
+  render x = TB.fromText x.text
   parser = P.label "IPvFuture" $ fmap (IpvFutureUnsafe . fst) $ P.match do
     P.single 'v'
-    parser @Hexdig
+    parser @(Hexdig 'LowerCase)
     P.single '.'
     P.many $
       asum @[]
@@ -286,7 +329,7 @@ instance Grammar IpvFuture where
 
 instance Arbitrary IpvFuture where
   arbitrary = do
-    x ← hexdigChar <$> arbitrary @Hexdig
+    x ← hexdigChar <$> arbitrary @(Hexdig 'LowerCase)
     xs ←
       QC.listOf1 $
         QC.oneof
@@ -296,19 +339,49 @@ instance Arbitrary IpvFuture where
           ]
     pure $ IpvFutureUnsafe $ Text.pack $ ['v', x, '.'] <> xs
 
-newtype Ipv6Address = Ipv6AddressUnsafe Text
+newtype Ipv6Address = Ipv6AddressUnsafe {text ∷ Text}
 
-instance Grammar Ipv6Address
+instance Grammar Ipv6Address where
+  render x = TB.fromText x.text
+  parser =
+    P.label "IPv6address" $
+      fmap (Ipv6AddressUnsafe . fst) $
+        P.match $
+          some $
+            asum @[] [void $ parser @(Hexdig 'LowerCase), void $ P.single ':']
 
-instance Arbitrary Ipv6Address
+instance Arbitrary Ipv6Address where
+  arbitrary = fmap Ipv6AddressUnsafe  $  QC.oneof
+    [
+--                                             6( h16 ":" ) ls32
+--                /                       "::" 5( h16 ":" ) ls32
+--                / [               h16 ] "::" 4( h16 ":" ) ls32
+--                / [ *1( h16 ":" ) h16 ] "::" 3( h16 ":" ) ls32
+--                / [ *2( h16 ":" ) h16 ] "::" 2( h16 ":" ) ls32
+--                / [ *3( h16 ":" ) h16 ] "::"    h16 ":"   ls32
+--                / [ *4( h16 ":" ) h16 ] "::"              ls32
+--                / [ *5( h16 ":" ) h16 ] "::"              h16
+--                / [ *6( h16 ":" ) h16 ] "::"
+    ]
+    where
+      h16 = do
+        n <- QC.choose(1,4)
+        fmap TB.fromString $ QC.vectorOf n $ fmap hexdigChar $ arbitrary @(Hexdig 'LowerCase)
+      ls32 = QC.oneof
+        [ do
+            a <- h16
+            b <- h16
+            pure $ a <> ":" <> b
+        , render <$> arbitrary @Ipv4Address
+        ]
 
-newtype Ipv4Address = Ipv4AddressUnsafe Text
+newtype Ipv4Address = Ipv4AddressUnsafe {text ∷ Text}
 
 instance Grammar Ipv4Address
 
 instance Arbitrary Ipv4Address
 
-newtype RegName = RegNameUnsafe Text
+newtype RegName = RegNameUnsafe {text ∷ Text}
 
 instance Grammar RegName
 
@@ -355,31 +428,31 @@ data PathEmpty = PathEmpty
 
 instance Grammar PathEmpty
 
-newtype Segment = SegmentUnsafe Text
+newtype Segment = SegmentUnsafe {text ∷ Text}
 
 instance Grammar Segment
 
 instance Arbitrary Segment
 
-newtype SegmentNz = SegmentNzUnsafe Text
+newtype SegmentNz = SegmentNzUnsafe {text ∷ Text}
 
 instance Grammar SegmentNz
 
 instance Arbitrary SegmentNz
 
-newtype SegmentNzNc = SegmentNzNcUnsafe Text
+newtype SegmentNzNc = SegmentNzNcUnsafe {text ∷ Text}
 
 instance Grammar SegmentNzNc
 
 instance Arbitrary SegmentNzNc
 
-newtype Query = QueryUnsafe Text
+newtype Query = QueryUnsafe {text ∷ Text}
 
 instance Grammar Query
 
 instance Arbitrary Query
 
-newtype Fragment = FragmentUnsafe Text
+newtype Fragment = FragmentUnsafe {text ∷ Text}
 
 instance Grammar Fragment
 
@@ -391,13 +464,13 @@ newtype PctEncoded = PctEncoded {byte ∷ Word8}
 instance Grammar PctEncoded where
   render x =
     TB.singleton '%'
-      <> render (HexdigUnsafe $ x.byte `shiftR` 4)
-      <> render (HexdigUnsafe $ x.byte .&. 15)
+      <> render (HexdigUnsafe @'UpperCase $ x.byte `shiftR` 4)
+      <> render (HexdigUnsafe @'UpperCase $ x.byte .&. 15)
   parser = P.label "pct-encoded" $ do
     P.single '%'
-    HexdigUnsafe a ← parser
-    HexdigUnsafe b ← parser
-    pure $ PctEncoded $ (a `shiftL` 4) + b
+    a ← parser @(Hexdig 'UpperCase)
+    b ← parser @(Hexdig 'UpperCase)
+    pure $ PctEncoded $ (a.byte `shiftL` 4) + b.byte
 
 newtype Unreserved = UnreservedUnsafe {char ∷ Char}
 

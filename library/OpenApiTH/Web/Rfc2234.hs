@@ -84,41 +84,58 @@ instance Grammar DigitNum where
 instance Arbitrary DigitNum where
   arbitrary = fmap DigitNumUnsafe $ QC.choose (0, 9)
 
-newtype Hexdig = HexdigUnsafe {byte ∷ Word8}
+data Case = UpperCase | LowerCase
 
-hexdigChar ∷ Hexdig → Char
+class IsCase (c ∷ Case) where
+  caseA ∷ Char
+
+instance IsCase UpperCase where
+  caseA = 'A'
+
+instance IsCase LowerCase where
+  caseA = 'a'
+
+newtype Hexdig (c ∷ Case) = HexdigUnsafe {byte ∷ Word8}
+
+hexdigChar ∷ ∀ c. IsCase c ⇒ Hexdig c → Char
 hexdigChar x =
   Char.chr $
-    Char.ord (if x.byte < 10 then '0' else 'A') + fromIntegral x.byte
+    Char.ord (if x.byte < 10 then '0' else caseA @c) + fromIntegral x.byte
 
-instance Grammar Hexdig where
+-- | @c@ is the case for used for rendering.
+--   Parsing accepts either.
+instance IsCase c ⇒ Grammar (Hexdig c) where
   render = TB.singleton . hexdigChar
   parser =
     P.label "HEXDIG" $
       fmap HexdigUnsafe $
         asum @[]
           [ (.byte) <$> parser @DigitNum
-          , (.byte) <$> parser @HexLetter
+          , (.byte) <$> parser @(HexLetter c)
           ]
 
-instance Testable Hexdig where
-  charIs x = charIs @DigitChar x || charIs @HexLetter x
+-- | @c@ is ignored.
+instance Testable (Hexdig c) where
+  charIs x = charIs @DigitChar x || charIs @(HexLetter c) x
 
-instance Arbitrary Hexdig where
+-- | @c@ is ignored.
+instance Arbitrary (Hexdig c) where
   arbitrary =
     fmap HexdigUnsafe $
       QC.frequency
         [ (10, (.byte) <$> arbitrary @DigitNum)
-        , (6, (.byte) <$> arbitrary @HexLetter)
+        , (6, (.byte) <$> arbitrary @(HexLetter c))
         ]
 
-newtype HexLetter = HexLetterUnsafe {byte ∷ Word8}
+newtype HexLetter (c :: Case) = HexLetterUnsafe {byte ∷ Word8}
 
-instance Grammar HexLetter where
+-- | @c@ is the case for used for rendering.
+--   Parsing accepts either.
+instance IsCase c => Grammar (HexLetter c) where
   render x =
     TB.singleton $
       Char.chr $
-        Char.ord 'A' + fromIntegral x.byte
+        Char.ord (caseA @c) + fromIntegral x.byte
   parser =
     fmap HexLetterUnsafe $
       asum @[]
@@ -134,12 +151,14 @@ instance Grammar HexLetter where
       $ P.satisfy
       $ \x → x >= a && x <= f
 
-instance Testable HexLetter where
+-- | @c@ is ignored.
+instance Testable (HexLetter c) where
   charIs x =
     (x >= 'A' && x <= 'F')
       || (x >= 'a' && x <= 'f')
 
-instance Arbitrary HexLetter where
+-- | @c@ is ignored.
+instance Arbitrary (HexLetter c) where
   arbitrary =
     fmap HexLetterUnsafe $
       QC.choose (10, 15)
