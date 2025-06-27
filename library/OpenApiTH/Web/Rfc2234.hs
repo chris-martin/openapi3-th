@@ -127,11 +127,11 @@ instance Arbitrary (Hexdig c) where
         , (6, (.byte) <$> arbitrary @(HexLetter c))
         ]
 
-newtype HexLetter (c :: Case) = HexLetterUnsafe {byte ∷ Word8}
+newtype HexLetter (c ∷ Case) = HexLetterUnsafe {byte ∷ Word8}
 
 -- | @c@ is the case for used for rendering.
 --   Parsing accepts either.
-instance IsCase c => Grammar (HexLetter c) where
+instance IsCase c ⇒ Grammar (HexLetter c) where
   render x =
     TB.singleton $
       Char.chr $

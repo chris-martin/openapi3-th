@@ -341,6 +341,7 @@ instance Arbitrary IpvFuture where
 
 newtype Ipv6Address = Ipv6AddressUnsafe {text ∷ Text}
 
+-- | Parsing is much more lenient than the spec out of laziness, could be improved
 instance Grammar Ipv6Address where
   render x = TB.fromText x.text
   parser =
@@ -351,27 +352,33 @@ instance Grammar Ipv6Address where
             asum @[] [void $ parser @(Hexdig 'LowerCase), void $ P.single ':']
 
 instance Arbitrary Ipv6Address where
-  arbitrary = fmap Ipv6AddressUnsafe  $  QC.oneof
-    [
---                                             6( h16 ":" ) ls32
---                /                       "::" 5( h16 ":" ) ls32
---                / [               h16 ] "::" 4( h16 ":" ) ls32
---                / [ *1( h16 ":" ) h16 ] "::" 3( h16 ":" ) ls32
---                / [ *2( h16 ":" ) h16 ] "::" 2( h16 ":" ) ls32
---                / [ *3( h16 ":" ) h16 ] "::"    h16 ":"   ls32
---                / [ *4( h16 ":" ) h16 ] "::"              ls32
---                / [ *5( h16 ":" ) h16 ] "::"              h16
---                / [ *6( h16 ":" ) h16 ] "::"
-    ]
-    where
-      h16 = do
-        n <- QC.choose(1,4)
-        fmap TB.fromString $ QC.vectorOf n $ fmap hexdigChar $ arbitrary @(Hexdig 'LowerCase)
-      ls32 = QC.oneof
-        [ do
-            a <- h16
-            b <- h16
-            pure $ a <> ":" <> b
+  arbitrary =
+    fmap (Ipv6AddressUnsafe . TL.toStrict . TB.toLazyText) $
+      QC.oneof
+        [ rep' 6 (h16 * pure ":") * ls32
+        , pure "::" * rep' 5 (h16 * pure ":") * ls32
+        , opt h16 * pure "::" * rep' 4 (h16 * pure ":") * ls32
+        , opt (rep 0 1 (h16 * pure ":") * h16) * pure "::" * rep' 3 (h16 * pure ":") * ls32
+        , opt (rep 0 2 (h16 * pure ":") * h16) * pure "::" * rep' 2 (h16 * pure ":") * ls32
+        , opt (rep 0 3 (h16 * pure ":") * h16) * pure "::" * h16 * pure ":" * ls32
+        , opt (rep 0 4 (h16 * pure ":") * h16) * pure "::" * ls32
+        , opt (rep 0 5 (h16 * pure ":") * h16) * pure "::" * h16
+        , opt (rep 0 6 (h16 * pure ":") * h16) * pure "::"
+        ]
+   where
+    rep a b g = do
+      n ← QC.choose (a, b)
+      fmap fold $ QC.vectorOf n g
+    rep' a = rep a a
+    (*) = liftA2 (<>)
+    opt g = QC.oneof [pure "", g]
+    h16, ls32 ∷ Gen TB.Builder
+    h16 = do
+      n ← QC.choose (1, 4)
+      fmap TB.fromString $ QC.vectorOf n $ fmap hexdigChar $ arbitrary @(Hexdig 'LowerCase)
+    ls32 =
+      QC.oneof
+        [ h16 * pure ":" * h16
         , render <$> arbitrary @Ipv4Address
         ]
 
