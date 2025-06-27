@@ -9,12 +9,14 @@ import Control.Monad (mfilter, replicateM, replicateM_, unless)
 import Control.Monad.Fail
 import Control.Monad.Validate
 import Data.Bifunctor (first)
+import Data.Bits (shiftL, shiftR, toIntegralSized, (.&.))
 import Data.Bool (not, (&&), (||))
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Char (Char)
 import Data.Char qualified as Char
 import Data.Either (Either (..), either)
+import Data.Foldable (fold, foldMap, foldl')
 import Data.Function (const)
 import Data.List qualified as List
 import Data.Sequence (Seq (..))
@@ -23,6 +25,9 @@ import Data.String (IsString (..))
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
+import Data.Text.Lazy qualified as TL
+import Data.Text.Lazy.Builder qualified as TB
+import Data.Text.Lazy.Builder.Int qualified as TB
 import Data.Tuple
 import Data.Vector qualified as V
 import Data.Word
@@ -38,12 +43,8 @@ import Text.Megaparsec (Parsec)
 import Text.Megaparsec qualified as P
 import Text.Megaparsec.Char.Lexer qualified as P
 import Text.Show (show)
-import Prelude (fromIntegral, (+))
+import Prelude (fromIntegral, (*), (+))
 
-import Data.Bits (shiftL, shiftR, (.&.))
-import Data.Foldable (fold, foldMap)
-import Data.Text.Lazy qualified as TL
-import Data.Text.Lazy.Builder qualified as TB
 import OpenApiTH.Grammar
 import OpenApiTH.Web.Rfc2234
 
@@ -355,22 +356,22 @@ instance Arbitrary Ipv6Address where
   arbitrary =
     fmap (Ipv6AddressUnsafe . TL.toStrict . TB.toLazyText) $
       QC.oneof
-        [ rep' 6 (h16 * pure ":") * ls32
-        , pure "::" * rep' 5 (h16 * pure ":") * ls32
-        , opt h16 * pure "::" * rep' 4 (h16 * pure ":") * ls32
-        , opt (rep 0 1 (h16 * pure ":") * h16) * pure "::" * rep' 3 (h16 * pure ":") * ls32
-        , opt (rep 0 2 (h16 * pure ":") * h16) * pure "::" * rep' 2 (h16 * pure ":") * ls32
-        , opt (rep 0 3 (h16 * pure ":") * h16) * pure "::" * h16 * pure ":" * ls32
-        , opt (rep 0 4 (h16 * pure ":") * h16) * pure "::" * ls32
-        , opt (rep 0 5 (h16 * pure ":") * h16) * pure "::" * h16
-        , opt (rep 0 6 (h16 * pure ":") * h16) * pure "::"
+        [ rep' 6 (h16 ^ pure ":") ^ ls32
+        , pure "::" ^ rep' 5 (h16 ^ pure ":") ^ ls32
+        , opt h16 ^ pure "::" ^ rep' 4 (h16 ^ pure ":") ^ ls32
+        , opt (rep 0 1 (h16 ^ pure ":") ^ h16) ^ pure "::" ^ rep' 3 (h16 ^ pure ":") ^ ls32
+        , opt (rep 0 2 (h16 ^ pure ":") ^ h16) ^ pure "::" ^ rep' 2 (h16 ^ pure ":") ^ ls32
+        , opt (rep 0 3 (h16 ^ pure ":") ^ h16) ^ pure "::" ^ h16 ^ pure ":" ^ ls32
+        , opt (rep 0 4 (h16 ^ pure ":") ^ h16) ^ pure "::" ^ ls32
+        , opt (rep 0 5 (h16 ^ pure ":") ^ h16) ^ pure "::" ^ h16
+        , opt (rep 0 6 (h16 ^ pure ":") ^ h16) ^ pure "::"
         ]
    where
     rep a b g = do
       n ← QC.choose (a, b)
       fmap fold $ QC.vectorOf n g
     rep' a = rep a a
-    (*) = liftA2 (<>)
+    (^) = liftA2 (<>)
     opt g = QC.oneof [pure "", g]
     h16, ls32 ∷ Gen TB.Builder
     h16 = do
@@ -378,15 +379,35 @@ instance Arbitrary Ipv6Address where
       fmap TB.fromString $ QC.vectorOf n $ fmap hexdigChar $ arbitrary @(Hexdig 'LowerCase)
     ls32 =
       QC.oneof
-        [ h16 * pure ":" * h16
+        [ h16 ^ pure ":" ^ h16
         , render <$> arbitrary @Ipv4Address
         ]
 
 newtype Ipv4Address = Ipv4AddressUnsafe {text ∷ Text}
 
-instance Grammar Ipv4Address
+instance Grammar Ipv4Address where
+  render x = TB.fromText x.text
+  parser = P.label "IPv4address" $ fmap (Ipv4AddressUnsafe . fst) $ P.match $ do
+    parser @DecOctet
+    P.single '.'
+    parser @DecOctet
+    P.single '.'
+    parser @DecOctet
+    P.single '.'
+    parser @DecOctet
 
-instance Arbitrary Ipv4Address
+instance Arbitrary Ipv4Address where
+  arbitrary =
+    fmap
+      ( Ipv4AddressUnsafe
+          . TL.toStrict
+          . TB.toLazyText
+          . fold
+          . List.intersperse "."
+          . fmap render
+      )
+      $ replicateM 4
+      $ arbitrary @DecOctet
 
 newtype RegName = RegNameUnsafe {text ∷ Text}
 
@@ -538,3 +559,13 @@ newtype SubDelim = SubDelimUnsafe {char ∷ Char}
 
 instance Enumerable SubDelim where
   enumerate = "!$&'()*+,;="
+
+newtype DecOctet = DecOctet {byte ∷ Word8}
+  deriving newtype Arbitrary
+
+instance Grammar DecOctet where
+  render x = TB.decimal x.byte
+  parser = P.label "dec-octet" $ fmap DecOctet $ do
+    xs ← some $ parser @DigitNum
+    let n ∷ Natural = foldl' (\t x → (t * 10) + fromIntegral x.byte) 0 xs
+    maybe empty pure $ toIntegralSized n
