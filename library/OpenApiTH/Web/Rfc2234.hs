@@ -22,6 +22,7 @@ import Data.String (IsString (..))
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
+import Data.Text.Lazy.Builder qualified as TB
 import Data.Tuple
 import Data.Vector qualified as V
 import Data.Word
@@ -39,126 +40,132 @@ import Text.Megaparsec.Char.Lexer qualified as P
 import Text.Show (show)
 import Prelude (Num ((+), (-)), fromIntegral)
 
-import Data.Text.Lazy.Builder qualified as TB
 import OpenApiTH.Grammar
 
-newtype Alpha = AlphaUnsafe {char ∷ Char}
-  deriving Grammar via Named "ALPHA" (Tested Alpha)
-  deriving IsChar via CoercedChar Alpha
+alphaGrammar ∷ Grammar Char
+alphaGrammar =
+  label "ALPHA" $
+    tokenPredicate
+      (\x → (x >= 'a' && x <= 'z') || (x >= 'A' && x <= 'Z'))
+      (QC.oneof [QC.choose ('a', 'z'), QC.choose ('A', 'Z')])
 
-instance Testable Alpha where
-  charIs x =
-    (x >= 'a' && x <= 'z')
-      || (x >= 'A' && x <= 'Z')
+digitGrammar ∷ Grammar Char
+digitGrammar =
+  label "DIGIT" $
+    tokenPredicate
+      (\x → x >= '0' && x <= '9')
+      (QC.choose ('0', '9'))
 
-instance Arbitrary Alpha where
-  arbitrary =
-    fmap AlphaUnsafe $
-      QC.oneof
-        [ QC.choose ('a', 'z')
-        , QC.choose ('A', 'Z')
-        ]
-
-newtype DigitChar = DigitCharUnsafe {char ∷ Char}
-  deriving Grammar via Named "DIGIT" (Tested DigitChar)
-  deriving IsChar via CoercedChar DigitChar
-
-instance Testable DigitChar where
-  charIs x = x >= '0' && x <= '9'
-
-instance Arbitrary DigitChar where
-  arbitrary = fmap DigitCharUnsafe $ QC.choose ('0', '9')
-
-newtype DigitNum = DigitNumUnsafe {byte ∷ Word8}
-
-instance Grammar DigitNum where
-  render x = TB.singleton $ Char.chr $ Char.ord '0' + fromIntegral x.byte
-  parser =
-    P.label "DIGIT"
-      $ fmap
-        ( \x →
-            DigitNumUnsafe $ fromIntegral $ Char.ord x.char - Char.ord '0'
-        )
-      $ parser @DigitChar
-
-instance Arbitrary DigitNum where
-  arbitrary = fmap DigitNumUnsafe $ QC.choose (0, 9)
+digitNumGrammar ∷ Grammar Word8
+digitNumGrammar =
+  Grammar
+    { render = \x → TB.singleton $ Char.chr $ Char.ord '0' + fromIntegral x
+    , parser = (\x → fromIntegral $ Char.ord x - Char.ord '0') <$> digitGrammar.parser
+    , generator = QC.choose (0, 9)
+    }
 
 data Case = UpperCase | LowerCase
+  deriving stock (Eq, Ord, Show, Enum, Bounded, Generic)
+  deriving Arbitrary via GenericArbitrary Case
 
-class IsCase (c ∷ Case) where
-  caseA ∷ Char
+caseA ∷ Case → Char
+caseA = fst . caseAF
 
-instance IsCase UpperCase where
-  caseA = 'A'
+caseAF ∷ Case → (Char, Char)
+caseAF = \case
+  UpperCase → ('A', 'F')
+  LowerCase → ('a', 'f')
 
-instance IsCase LowerCase where
-  caseA = 'a'
+isHexLetterInCase ∷ Case → Char → Bool
+isHexLetterInCase c x = let (a, f) = caseAF c in x >= a && x <= f
 
-newtype Hexdig (c ∷ Case) = HexdigUnsafe {byte ∷ Word8}
-
-hexdigChar ∷ ∀ c. IsCase c ⇒ Hexdig c → Char
-hexdigChar x =
+hexdigToChar ∷ Case → Word8 → Char
+hexdigToChar c x =
   Char.chr $
-    Char.ord (if x.byte < 10 then '0' else caseA @c) + fromIntegral x.byte
+    Char.ord (if x < 10 then '0' else caseA c) + fromIntegral x
 
--- | @c@ is the case for used for rendering.
---   Parsing accepts either.
-instance IsCase c ⇒ Grammar (Hexdig c) where
-  render = TB.singleton . hexdigChar
-  parser =
-    P.label "HEXDIG" $
-      fmap HexdigUnsafe $
+hexLetterNumParserInCase ∷ Case → Parsec Void Text Word8
+hexLetterNumParserInCase c =
+  let (a, f) = caseAF c
+   in fmap
+        (\x → fromIntegral $ Char.ord x - Char.ord a + 10)
+        $ P.satisfy (\x → x >= a && x <= f)
+
+hexdigGrammar ∷ Grammar Char
+hexdigGrammar =
+  label
+    "HEXDIG"
+    Grammar
+      { render = TB.singleton
+      , parser = digitGrammar.parser <|> hexLetterGrammar.parser
+      , generator = hexdigToChar <$> arbitrary <*> QC.choose (0, 15)
+      }
+
+hexdigNumGrammar
+  ∷ Case
+  -- ^ For rendering and generating; does not affect parsing
+  → Grammar Word8
+hexdigNumGrammar c =
+  label
+    "HEXDIG"
+    Grammar
+      { render = TB.singleton . hexdigToChar c
+      , parser = digitNumGrammar.parser <|> (hexLetterNumGrammar c).parser
+      , generator = QC.choose (0, 15)
+      }
+
+hexdigCaseGrammar
+  ∷ Case
+  -- ^ For rendering and generating; parsing is lenient but is converted to this case
+  → Grammar Char
+hexdigCaseGrammar c =
+  label
+    "HEXDIG"
+    Grammar
+      { render = TB.singleton
+      , parser = digitGrammar.parser <|> (hexLetterCaseGrammar c).parser
+      , generator = hexdigToChar c <$> QC.choose (0, 15)
+      }
+
+hexLetterGrammar ∷ Grammar Char
+hexLetterGrammar =
+  tokenPredicate
+    (\x → isHexLetterInCase LowerCase x || isHexLetterInCase UpperCase x)
+    (QC.oneof $ QC.choose . caseAF <$> [LowerCase, UpperCase])
+
+hexLetterCaseGrammar
+  ∷ Case
+  -- ^ For rendering and generating; parsing is lenient but is converted to this case
+  → Grammar Char
+hexLetterCaseGrammar c =
+  Grammar
+    { render = TB.singleton
+    , parser =
         asum @[]
-          [ (.byte) <$> parser @DigitNum
-          , (.byte) <$> parser @(HexLetter c)
+          [ P.satisfy $ isHexLetterInCase c
+          , case c of
+              LowerCase →
+                fmap (\x → Char.chr $ Char.ord x - Char.ord 'A' + Char.ord 'a') $
+                  P.satisfy (isHexLetterInCase UpperCase)
+              UpperCase →
+                fmap (\x → Char.chr $ Char.ord x - Char.ord 'a' + Char.ord 'A') $
+                  P.satisfy (isHexLetterInCase LowerCase)
           ]
+    , generator = QC.choose $ caseAF c
+    }
 
--- | @c@ is ignored.
-instance Testable (Hexdig c) where
-  charIs x = charIs @DigitChar x || charIs @(HexLetter c) x
-
--- | @c@ is ignored.
-instance Arbitrary (Hexdig c) where
-  arbitrary =
-    fmap HexdigUnsafe $
-      QC.frequency
-        [ (10, (.byte) <$> arbitrary @DigitNum)
-        , (6, (.byte) <$> arbitrary @(HexLetter c))
-        ]
-
-newtype HexLetter (c ∷ Case) = HexLetterUnsafe {byte ∷ Word8}
-
--- | @c@ is the case for used for rendering.
---   Parsing accepts either.
-instance IsCase c ⇒ Grammar (HexLetter c) where
-  render x =
-    TB.singleton $
-      Char.chr $
-        Char.ord (caseA @c) + fromIntegral x.byte
-  parser =
-    fmap HexLetterUnsafe $
-      asum @[]
-        [ z 'A' 'F'
-        , z 'a' 'f'
-        ]
-   where
-    z a f = fmap
-      ( \x →
-          fromIntegral $
-            Char.ord x - Char.ord a + 10
-      )
-      $ P.satisfy
-      $ \x → x >= a && x <= f
-
--- | @c@ is ignored.
-instance Testable (HexLetter c) where
-  charIs x =
-    (x >= 'A' && x <= 'F')
-      || (x >= 'a' && x <= 'f')
-
--- | @c@ is ignored.
-instance Arbitrary (HexLetter c) where
-  arbitrary =
-    fmap HexLetterUnsafe $
-      QC.choose (10, 15)
+hexLetterNumGrammar
+  ∷ Case
+  -- ^ For rendering and generating; does not affect parsing
+  → Grammar Word8
+hexLetterNumGrammar c =
+  Grammar
+    { render = \x →
+        TB.singleton $
+          Char.chr $
+            Char.ord (caseA c) + fromIntegral x
+    , parser =
+        hexLetterNumParserInCase LowerCase
+          <|> hexLetterNumParserInCase UpperCase
+    , generator = QC.choose (10, 15)
+    }

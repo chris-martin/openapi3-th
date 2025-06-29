@@ -40,49 +40,30 @@ import Text.Megaparsec (Parsec)
 import Text.Megaparsec qualified as P
 import Text.Megaparsec.Char.Lexer qualified as P
 import Text.Show (show)
-import Prelude (fromIntegral)
+import Prelude (String, fromIntegral)
 
-class Grammar a where
-  parser ∷ Parsec Void Text a
-  render ∷ a → TB.Builder
+data Grammar a
+  = Grammar
+  { parser ∷ Parsec Void Text a
+  , render ∷ a → TB.Builder
+  , generator ∷ Gen a
+  }
 
-class IsChar a where
-  toChar ∷ a → Char
-  fromCharUnsafe ∷ P.Token Text → a
+label ∷ String → Grammar a → Grammar a
+label l g = g {parser = P.label l g.parser}
 
-newtype CoercedChar a = CoercedChar a
+tokenEnumeration ∷ [Char] → Grammar Char
+tokenEnumeration xs =
+  Grammar
+    { parser = P.satisfy (`List.elem` xs)
+    , render = TB.singleton
+    , generator = QC.elements xs
+    }
 
-instance Coercible Char a ⇒ IsChar (CoercedChar a) where
-  toChar = coerce
-  fromCharUnsafe = coerce
-
-class Enumerable a where
-  enumerate ∷ [P.Token Text]
-
-newtype Enumerated a = Enumerated a
-
-instance (Enumerable a, IsChar a) ⇒ Arbitrary (Enumerated a) where
-  arbitrary = fmap (Enumerated . fromCharUnsafe) $ QC.elements $ enumerate @a
-
-instance (Enumerable a, IsChar a) ⇒ Grammar (Enumerated a) where
-  parser =
-    fmap (Enumerated . fromCharUnsafe @a) $ P.satisfy \x → List.elem x $ enumerate @a
-  render (Enumerated x) = TB.singleton $ toChar x
-
-class Testable a where
-  charIs ∷ P.Token Text → Bool
-
-instance Enumerable a ⇒ Testable (Enumerated a) where
-  charIs x = List.elem x $ enumerate @a
-
-newtype Tested a = Tested a
-
-instance (Testable a, IsChar a) ⇒ Grammar (Tested a) where
-  parser = fmap (Tested . fromCharUnsafe) $ P.satisfy $ charIs @a
-  render (Tested x) = TB.singleton $ toChar x
-
-newtype Named (s ∷ Symbol) a = Named a
-
-instance (KnownSymbol s, Grammar a) ⇒ Grammar (Named s a) where
-  parser = fmap (Named @s) $ P.label (symbolVal $ Proxy @s) $ parser @a
-  render (Named x) = render x
+tokenPredicate ∷ (Char → Bool) → Gen Char → Grammar Char
+tokenPredicate f generator =
+  Grammar
+    { parser = P.satisfy f
+    , render = TB.singleton
+    , generator
+    }
