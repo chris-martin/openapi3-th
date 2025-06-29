@@ -411,9 +411,15 @@ instance Arbitrary Ipv4Address where
 
 newtype RegName = RegNameUnsafe {text ∷ Text}
 
-instance Grammar RegName
+instance Grammar RegName where
+  render x = TB.fromText x.text
+  parser = P.label "reg-name" $ fmap (RegNameUnsafe . fst) $
+    P.match $
+    P.many $ asum @[] [void $ parser @Unreserved
+      ,void $ parser @PctEncoded
+      ,void $ parser @SubDelim]
 
-instance Arbitrary RegName
+instance Arbitrary RegName where
 
 data Path
   = Path_Abempty PathAbempty
