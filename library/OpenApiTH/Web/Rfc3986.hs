@@ -83,10 +83,10 @@ instance HasGrammar Uri where
       }
 
 data HierPart
-  = HierPart_Authority Authority PathAbempty
-  | HierPart_Absolute PathAbsolute
-  | HierPart_Rootless PathRootless
-  | HierPart_Empty PathEmpty
+  = HierPart_Authority Authority [Text]
+  | HierPart_Absolute [Text]
+  | HierPart_Rootless [Text]
+  | HierPart_Empty
   deriving Arbitrary via TheGrammar HierPart
 
 instance HasGrammar HierPart where
@@ -95,23 +95,23 @@ instance HasGrammar HierPart where
     "hier-part"
     Grammar
       { render = \case
-          HierPart_Authority a p → "//" <> render grammar a <> render grammar p
-          HierPart_Absolute p → render grammar p
-          HierPart_Rootless p → render grammar p
-          HierPart_Empty p → render grammar p
+          HierPart_Authority a p → "//" <> render grammar a <> render pathAbemptyGrammar p
+          HierPart_Absolute p → render pathAbsoluteGrammar p
+          HierPart_Rootless p → render pathRootlessGrammr p
+          HierPart_Empty  → render pathEmptyGrammar ()
       , parser =
           P.label "hier-part" $
             asum @[]
-              [ P.chunk "//" *> (HierPart_Authority <$> parser grammar <*> parser grammar)
-              , HierPart_Absolute <$> parser grammar
-              , HierPart_Rootless <$> parser grammar
-              , HierPart_Empty <$> parser grammar
+              [ P.chunk "//" *> (HierPart_Authority <$> parser grammar <*> parser pathAbemptyGrammar)
+              , HierPart_Absolute <$> parser pathAbsoluteGrammar
+              , HierPart_Rootless <$> parser pathRootlessGrammr
+              , HierPart_Empty <$ parser pathEmptyGrammar
               ]
       , generator = QC.oneof
-          [HierPart_Authority <$> generator grammar <*> generator grammar
-        ,HierPart_Absolute <$> generator grammar
-        ,HierPart_Rootless <$> generator grammar
-        ,HierPart_Empty <$> generator grammar
+          [HierPart_Authority <$> generator grammar <*> generator pathAbemptyGrammar
+        ,HierPart_Absolute <$> generator pathAbsoluteGrammar
+        ,HierPart_Rootless <$> generator pathRootlessGrammr
+        ,HierPart_Empty <$ generator pathEmptyGrammar
           ]
       }
 
@@ -200,10 +200,10 @@ instance HasGrammar RelativeRef where
 
 
 data RelativePart
-  = RelativePart_Authority Authority PathAbempty
-  | RelativePart_Absolute PathAbsolute
-  | RelativePart_Noscheme PathNoscheme
-  | RelativePart_Empty PathEmpty
+  = RelativePart_Authority Authority [Text]
+  | RelativePart_Absolute [Text]
+  | RelativePart_Noscheme [Text]
+  | RelativePart_Empty
   deriving stock Generic
   deriving Arbitrary via TheGrammar RelativePart
 
@@ -213,22 +213,22 @@ instance HasGrammar RelativePart where
     "relative-part"
     Grammar
       { render = \case
-          RelativePart_Authority a p → "//" <> render grammar a <> render grammar p
-          RelativePart_Absolute p → render grammar p
-          RelativePart_Noscheme p → render grammar p
-          RelativePart_Empty p → render grammar p
+          RelativePart_Authority a p → "//" <> render grammar a <> render pathAbemptyGrammar p
+          RelativePart_Absolute p → render pathAbsoluteGrammar p
+          RelativePart_Noscheme p → render pathNoschemeGrammar p
+          RelativePart_Empty  → render pathEmptyGrammar ()
       , parser =
           asum @[]
-            [ P.chunk "//" *> (RelativePart_Authority <$> parser grammar <*> parser grammar)
-            , RelativePart_Absolute <$> parser grammar
-            , RelativePart_Noscheme <$> parser grammar
-            , RelativePart_Empty <$> parser grammar
+            [ P.chunk "//" *> (RelativePart_Authority <$> parser grammar <*> parser pathAbemptyGrammar)
+            , RelativePart_Absolute <$> parser pathAbsoluteGrammar
+            , RelativePart_Noscheme <$> parser pathNoschemeGrammar
+            , RelativePart_Empty <$ parser pathEmptyGrammar
             ]
       , generator = QC.oneof
-          [ RelativePart_Authority <$> generator grammar <*> generator grammar
-          , RelativePart_Absolute  <$> generator grammar
-          , RelativePart_Noscheme  <$> generator grammar
-          , RelativePart_Empty  <$> generator grammar
+          [ RelativePart_Authority <$> generator grammar <*> generator pathAbemptyGrammar
+          , RelativePart_Absolute  <$> generator pathAbsoluteGrammar
+          , RelativePart_Noscheme  <$> generator pathNoschemeGrammar
+          , RelativePart_Empty  <$ generator pathEmptyGrammar
           ]
       }
 
@@ -502,62 +502,49 @@ regNameGrammar =
       }
 
 data Path
-  = Path_Abempty PathAbempty
-  | Path_Absolute PathAbsolute
-  | Path_Noscheme PathNoscheme
-  | Path_Rootless PathRootless
-  | Path_Empty PathEmpty
+  = Path_Abempty [Text] -- PathAbempty
+  | Path_Absolute [Text] -- PathAbsolute
+  | Path_Noscheme [Text] -- PathNoscheme
+  | Path_Rootless [Text] -- PathRootless
+  | Path_Empty -- PathEmpty
   deriving Arbitrary via TheGrammar Path
 
-instance HasGrammar Path
+instance HasGrammar Path where
+  grammar = Grammar
+    {
+      render=_
+      ,parser =_
+      ,generator= _
 
-newtype PathAbempty = PathAbempty [Segment]
-  deriving stock Generic
-  deriving Arbitrary via TheGrammar PathAbempty
+    }
 
-instance HasGrammar PathAbempty
+-- newtype PathAbempty = PathAbempty [Segment]
+pathAbemptyGrammar :: Grammar [Text]
+pathAbemptyGrammar = Grammar{}
 
-data PathAbsolute = PathAbsolute SegmentNz [Segment]
-  deriving stock Generic
-  deriving Arbitrary via GenericArbitrary PathAbsolute
+-- data PathAbsolute = PathAbsolute SegmentNz [Segment]
+pathAbsoluteGrammar :: Grammar [Text]
+pathAbsoluteGrammar = Grammar {}
 
-instance HasGrammar PathAbsolute
+-- data PathNoscheme = PathNoscheme SegmentNzNc [Segment]
+pathNoschemeGrammar :: Grammar [Text]
+pathNoschemeGrammar = Grammar {}
 
-data PathNoscheme = PathNoscheme SegmentNzNc [Segment]
-  deriving stock Generic
-  deriving Arbitrary via GenericArbitrary PathNoscheme
+-- data PathRootless = PathRootless SegmentNz [Segment]
+pathRootlessGrammar :: Grammar [Text]
+pathRootlessGrammar = Grammar {}
 
-instance HasGrammar PathNoscheme
+pathEmptyGrammar :: Grammar ()
+pathEmptyGrammar =  Grammar {}
 
-data PathRootless = PathRootless SegmentNz [Segment]
-  deriving stock Generic
-  deriving Arbitrary via GenericArbitrary PathRootless
+segmentGrammar :: Grammar Text
+segmentGrammar = Grammar {}
 
-instance HasGrammar PathRootless
+segmentNzGrammar :: Grammar Text
+segmentNzGrammar = Grammar {}
 
-data PathEmpty = PathEmpty
-  deriving stock Generic
-  deriving Arbitrary via GenericArbitrary PathEmpty
-
-instance HasGrammar PathEmpty
-
-newtype Segment = SegmentUnsafe {text ∷ Text}
-
-instance HasGrammar Segment
-
-instance Arbitrary Segment
-
-newtype SegmentNz = SegmentNzUnsafe {text ∷ Text}
-
-instance HasGrammar SegmentNz
-
-instance Arbitrary SegmentNz
-
-newtype SegmentNzNc = SegmentNzNcUnsafe {text ∷ Text}
-
-instance HasGrammar SegmentNzNc
-
-instance Arbitrary SegmentNzNc
+segmentNzNcGrammar :: Grammar Text
+segmentNzNcGrammar = Grammar{}
 
 pctEncodedGrammar ∷ Grammar Word8
 pctEncodedGrammar =
