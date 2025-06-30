@@ -36,7 +36,7 @@ import Language.Haskell.TH.Quote
 import Language.Haskell.TH.Syntax
 import Numeric.Natural (Natural)
 import Optics.TH
-import Test.QuickCheck (Gen)
+import Test.QuickCheck (Gen, liftArbitrary)
 import Test.QuickCheck qualified as QC
 import Test.QuickCheck.Arbitrary.Generic
 import Text.Megaparsec (Parsec)
@@ -54,28 +54,32 @@ data Uri = Uri
   , query ∷ Maybe Text
   , fragment ∷ Maybe Text
   }
-  deriving stock Generic
-  deriving Arbitrary via GenericArbitrary Uri
+  deriving Arbitrary via TheGrammar Uri
 
-uriGrammar ∷ Grammar Uri
-uriGrammar =
+instance HasGrammar Uri where
+ grammar =
   label
     "URI"
     Grammar
       { render = \x →
           schemeGrammar.render x.scheme
             <> ":"
-            <> hierPartGrammar.render x.hierPart
+            <> render grammar x.hierPart
             <> foldMap (\q → "?" <> queryGrammar.render q) x.query
             <> foldMap (\f → "#" <> fragmentGrammar.render f) x.fragment
       , parser = do
-          scheme ← schemeGrammar.parser
+          scheme ← parser schemeGrammar
           P.single ':'
-          hierPart ← hierPartGrammar.parser
-          query ← P.optional $ P.single '?' *> queryGrammar.parser
-          fragment ← P.optional $ P.single '#' *> fragmentGrammar.parser
+          hierPart ← parser grammar
+          query ← P.optional $ P.single '?' *> parser queryGrammar
+          fragment ← P.optional $ P.single '#' *> parser fragmentGrammar
           pure Uri {scheme, hierPart, query, fragment}
-      , generator = arbitrary
+      , generator = do
+          scheme <- schemeGrammar.generator
+          hierPart <- generator grammar
+          query <- liftArbitrary queryGrammar.generator
+          fragment <- liftArbitrary fragmentGrammar.generator
+          pure Uri {scheme, hierPart, query, fragment}
       }
 
 data HierPart
@@ -83,48 +87,56 @@ data HierPart
   | HierPart_Absolute PathAbsolute
   | HierPart_Rootless PathRootless
   | HierPart_Empty PathEmpty
-  deriving stock Generic
-  deriving Arbitrary via GenericArbitrary HierPart
+  deriving Arbitrary via TheGrammar HierPart
 
-hierPartGrammar ∷ Grammar HierPart
-hierPartGrammar =
+instance HasGrammar HierPart where
+ grammar =
   label
     "hier-part"
     Grammar
       { render = \case
-          HierPart_Authority a p → "//" <> render a <> render p
-          HierPart_Absolute p → render p
-          HierPart_Rootless p → render p
-          HierPart_Empty p → render p
+          HierPart_Authority a p → "//" <> render grammar a <> render grammar p
+          HierPart_Absolute p → render grammar p
+          HierPart_Rootless p → render grammar p
+          HierPart_Empty p → render grammar p
       , parser =
           P.label "hier-part" $
             asum @[]
-              [ P.chunk "//" *> (HierPart_Authority <$> parser <*> parser)
-              , HierPart_Absolute <$> parser
-              , HierPart_Rootless <$> parser
-              , HierPart_Empty <$> parser
+              [ P.chunk "//" *> (HierPart_Authority <$> parser grammar <*> parser grammar)
+              , HierPart_Absolute <$> parser grammar
+              , HierPart_Rootless <$> parser grammar
+              , HierPart_Empty <$> parser grammar
               ]
-      , generator = arbitrary
+      , generator = QC.oneof
+          [HierPart_Authority <$> generator grammar <*> generator grammar
+        ,HierPart_Absolute <$> generator grammar
+        ,HierPart_Rootless <$> generator grammar
+        ,HierPart_Empty <$> generator grammar
+          ]
       }
 
 data UriReference
   = UriReference_Uri Uri
   | UriReference_RelativeRef RelativeRef
-  deriving stock Generic
-  deriving Arbitrary via GenericArbitrary UriReference
+  deriving Arbitrary via TheGrammar UriReference
 
-uriReferenceGrammar =
+instance HasGrammar UriReference where
+ grammar =
   Grammar
     { render = \case
-        UriReference_Uri x → render x
-        UriReference_RelativeRef x → render x
+        UriReference_Uri x → render grammar x
+        UriReference_RelativeRef x → render grammar x
     , parser =
         P.label "URI-reference" $
           asum @[]
-            [ UriReference_Uri <$> parser
-            , UriReference_RelativeRef <$> parser
+            [ UriReference_Uri <$> parser grammar
+            , UriReference_RelativeRef <$> parser grammar
             ]
-    , generator = arbitrary
+    , generator = QC.oneof [
+      UriReference_Uri <$> generator grammar
+      ,UriReference_RelativeRef <$> generator grammar
+
+    ]
     }
 
 data AbsoluteUri = AbsoluteUri
@@ -132,25 +144,29 @@ data AbsoluteUri = AbsoluteUri
   , hierPart ∷ HierPart
   , query ∷ Maybe Text
   }
-  deriving stock Generic
-  deriving Arbitrary via GenericArbitrary AbsoluteUri
+  deriving Arbitrary via TheGrammar AbsoluteUri
 
-absoluteUriGrammar =
+instance HasGrammar AbsoluteUri where
+ grammar =
   label
     "absolute-uri"
     Grammar
       { render = \x →
-          render x.scheme
+          render schemeGrammar x.scheme
             <> ":"
-            <> render x.hierPart
-            <> foldMap (\q → "?" <> render q) x.query
+            <> render grammar x.hierPart
+            <> foldMap (\q → "?" <> render queryGrammar q) x.query
       , parser = do
-          scheme ← parser
+          scheme ← parser schemeGrammar
           P.single ':'
-          hierPart ← parser
-          query ← P.optional $ P.single '?' *> parser
+          hierPart ← parser grammar
+          query ← P.optional $ P.single '?' *> parser queryGrammar
           pure AbsoluteUri {scheme, hierPart, query}
-      , generator = arbitrary
+      , generator = do
+          scheme <- schemeGrammar.generator
+          hierPart <- generator grammar
+          query <- liftArbitrary $ generator queryGrammar
+          pure AbsoluteUri {scheme, hierPart, query}
       }
 
 data RelativeRef = RelativeRef
@@ -159,23 +175,29 @@ data RelativeRef = RelativeRef
   , fragment ∷ Maybe Text
   }
   deriving stock Generic
-  deriving Arbitrary via GenericArbitrary RelativeRef
+  deriving Arbitrary via TheGrammar RelativeRef
 
-relativeRefGrammar =
+instance HasGrammar RelativeRef where
+ grammar =
   label
     "relative-ref"
     Grammar
       { render = \x →
-          render x.relativePart
-            <> foldMap (\q → "?" <> render q) x.query
-            <> foldMap (\f → "#" <> render f) x.fragment
+          render grammar x.relativePart
+            <> foldMap (\q → "?" <> render queryGrammar q) x.query
+            <> foldMap (\f → "#" <> render fragmentGrammar f) x.fragment
       , parser = do
-          relativePart ← parser
-          query ← P.optional $ P.single '?' *> parser
-          fragment ← P.optional $ P.single '#' *> parser
+          relativePart ← parser grammar
+          query ← P.optional $ P.single '?' *> parser queryGrammar
+          fragment ← P.optional $ P.single '#' *> parser fragmentGrammar
           pure RelativeRef {relativePart, query, fragment}
-      , generator = arbitrary
+      , generator = do
+          relativePart <- generator grammar
+          query <- liftArbitrary $ generator queryGrammar
+          fragment <- liftArbitrary $ generator fragmentGrammar
+          pure RelativeRef{relativePart,query,fragment}
       }
+
 
 data RelativePart
   = RelativePart_Authority Authority PathAbempty
@@ -183,25 +205,31 @@ data RelativePart
   | RelativePart_Noscheme PathNoscheme
   | RelativePart_Empty PathEmpty
   deriving stock Generic
-  deriving Arbitrary via GenericArbitrary RelativePart
+  deriving Arbitrary via TheGrammar RelativePart
 
-relativePartGrammar =
+instance HasGrammar RelativePart where
+ grammar =
   label
     "relative-part"
     Grammar
       { render = \case
-          RelativePart_Authority a p → "//" <> render a <> render p
-          RelativePart_Absolute p → render p
-          RelativePart_Noscheme p → render p
-          RelativePart_Empty p → render p
+          RelativePart_Authority a p → "//" <> render grammar a <> render grammar p
+          RelativePart_Absolute p → render grammar p
+          RelativePart_Noscheme p → render grammar p
+          RelativePart_Empty p → render grammar p
       , parser =
           asum @[]
-            [ P.chunk "//" *> (RelativePart_Authority <$> parser <*> parser)
-            , RelativePart_Absolute <$> parser
-            , RelativePart_Noscheme <$> parser
-            , RelativePart_Empty <$> parser
+            [ P.chunk "//" *> (RelativePart_Authority <$> parser grammar <*> parser grammar)
+            , RelativePart_Absolute <$> parser grammar
+            , RelativePart_Noscheme <$> parser grammar
+            , RelativePart_Empty <$> parser grammar
             ]
-      , generator = arbitrary
+      , generator = QC.oneof
+          [ RelativePart_Authority <$> generator grammar <*> generator grammar
+          , RelativePart_Absolute  <$> generator grammar
+          , RelativePart_Noscheme  <$> generator grammar
+          , RelativePart_Empty  <$> generator grammar
+          ]
       }
 
 schemeGrammar ∷ Grammar Text
@@ -214,19 +242,19 @@ schemeGrammar =
           alphaGrammar.parser
           P.many $
             asum @[]
-              [ void $ alpha.parser
-              , void $ digit.parser
-              , void $ schemeSymbolGrammar.parser
+              [ void $ parser alphaGrammar
+              , void $ parser digitGrammar
+              , void $ parser schemeSymbolGrammar
               ]
       , generator =
           fmap Text.pack $
             (:)
-              <$> alpha.generator
+              <$> generator alphaGrammar
               <*> QC.listOf
                 ( QC.oneof
-                    [ alpha.generator
-                    , digit.generator
-                    , schemeSymbolGrammar.generator
+                    [ generator alphaGrammar
+                    , generator digitGrammar
+                    , generator schemeSymbolGrammar
                     ]
                 )
       }
@@ -238,26 +266,31 @@ data Authority = Authority
   , host ∷ Host
   , port ∷ Maybe Text
   }
-  deriving stock Generic
-  deriving Arbitrary via GenericArbitrary Authority
+  deriving Arbitrary via TheGrammar Authority
 
-authorityGrammar =
+instance HasGrammar Authority where
+ grammar =
   label
     "authority"
     Grammar
       { render = \x →
-          foldMap (\u → render u <> "@") x.userinfo
-            <> render x.host
-            <> foldMap (\p → ":" <> render p) x.port
+          foldMap (\u → render userinfoGrammar u <> "@") x.userinfo
+            <> render grammar x.host
+            <> foldMap (\p → ":" <> render portGrammar p) x.port
       , parser = P.label "authority" do
-          userinfo ← P.optional $ P.try $ parser <* P.single '@'
-          host ← parser
-          port ← P.optional $ P.single ':' *> parser
+          userinfo ← P.optional $ P.try $ parser userinfoGrammar <* P.single '@'
+          host ← parser grammar
+          port ← P.optional $ P.single ':' *> parser portGrammar
           pure Authority {userinfo, host, port}
-      , generator = arbitrary
+      , generator = do
+          userinfo <- liftArbitrary $ generator userinfoGrammar
+          host <- generator grammar
+          port <- liftArbitrary $ generator portGrammar
+          pure Authority {userinfo, host, port}
       }
 
-userInfoGrammar =
+userinfoGrammar :: Grammar Text
+userinfoGrammar =
   label
     "userinfo"
     Grammar
@@ -274,9 +307,9 @@ userInfoGrammar =
           fmap (TL.toStrict . TB.toLazyText . fold) $
             QC.listOf $
               QC.oneof
-                [ render <$> unreservedGrammar.generator
-                , render <$> pctEncodedGrammar.generator
-                , render <$> subDelimGrammar.generator
+                [ renderGenerator unreservedGrammar
+                , renderGenerator  pctEncodedGrammar
+                , renderGenerator subDelimGrammar
                 , pure ":"
                 ]
       }
@@ -285,60 +318,69 @@ data Host
   = Host_IpLiteral IpLiteral
   | Host_Ipv4 Text
   | Host_RegName Text
-  deriving stock Generic
-  deriving Arbitrary via GenericArbitrary Host
+  deriving Arbitrary via TheGrammar Host
 
-hostGrammar =
+instance HasGrammar Host where
+ grammar =
   label
     "host"
     Grammar
       { render = \case
-          Host_IpLiteral x → render x
-          Host_Ipv4 x → render x
-          Host_RegName x → render x
+          Host_IpLiteral x → render grammar x
+          Host_Ipv4 x → render ipv4AddressGrammar x
+          Host_RegName x → render regNameGrammar x
       , parser =
           asum @[]
-            [ Host_IpLiteral <$> parser
-            , Host_Ipv4 <$> parser
-            , Host_RegName <$> parser
+            [ Host_IpLiteral <$> parser grammar
+            , Host_Ipv4 <$> parser ipv4AddressGrammar
+            , Host_RegName <$> parser regNameGrammar
             ]
-      , generator = arbitrary
+      , generator = QC.oneof
+          [Host_IpLiteral <$> generator grammar
+          ,Host_Ipv4 <$> generator ipv4AddressGrammar
+          ,Host_RegName <$> generator regNameGrammar
+          ]
       }
 
+portGrammar :: Grammar Text
 portGrammar =
   label
     "port"
     Grammar
       { render = TB.fromText
-      , parser = fmap fst $ P.match $ P.many $ digitGrammar.parser
-      , generator = fmap Text.pack $ QC.listOf $ fmap (.char) digitGrammar.generator
+      , parser = fmap fst $ P.match $ P.many $ parser digitGrammar
+      , generator = fmap Text.pack $ QC.listOf $ generator digitGrammar
       }
 
 data IpLiteral
   = IpLiteral_V6 Text
   | IpLiteral_Future Text
   deriving stock Generic
-  deriving Arbitrary via GenericArbitrary IpLiteral
+  deriving Arbitrary via TheGrammar IpLiteral
 
-ipLiteralGrammar =
+instance HasGrammar IpLiteral where
+ grammar =
   label
     "IP-literal"
     Grammar
       { render = \x →
           "["
             <> ( case x of
-                  IpLiteral_V6 x → render x
-                  IpLiteral_Future x → render x
+                  IpLiteral_V6 x → render  ipv6AddressGrammar x
+                  IpLiteral_Future x → render ipvFutureGrammar x
                )
             <> "]"
       , parser =
           P.single '['
             *> asum @[]
-              [ IpLiteral_V6 <$> parser
-              , IpLiteral_Future <$> parser
+              [ IpLiteral_V6 <$> parser ipv6AddressGrammar
+              , IpLiteral_Future <$> parser ipvFutureGrammar
               ]
             <* P.single ']'
-      , generator = arbitrary
+      , generator = QC.oneof
+          [ IpLiteral_V6 <$> generator ipv6AddressGrammar
+          ,IpLiteral_Future <$> generator ipvFutureGrammar
+          ]
       }
 
 ipvFutureGrammar ∷ Grammar Text
@@ -358,15 +400,15 @@ ipvFutureGrammar =
               , void $ P.single ':'
               ]
       , generator = do
-          x ← hexdigChar <$> hexdigGrammar.arbitrary
+          x ← generator hexdigGrammar
           xs ←
             QC.listOf1 $
               QC.oneof
-                [ (.char) <$> unreservedGrammar.generator
-                , (.char) <$> subDelimGrammar.generator
+                [ generator  unreservedGrammar
+                , generator  subDelimGrammar
                 , pure ':'
                 ]
-          pure $ IpvFutureUnsafe $ Text.pack $ ['v', x, '.'] <> xs
+          pure  $ Text.pack $ ['v', x, '.'] <> xs
       }
 
 -- | Parsing is much more lenient than the spec out of laziness, could be improved
@@ -405,11 +447,11 @@ ipv6AddressGrammar =
   h16, ls32 ∷ Gen TB.Builder
   h16 = do
     n ← QC.choose (1, 4)
-    fmap TB.fromString $ QC.vectorOf n $ fmap hexdigChar hexdigGrammar.generator
+    fmap TB.fromString $ QC.vectorOf n hexdigGrammar.generator
   ls32 =
     QC.oneof
       [ h16 ^ pure ":" ^ h16
-      , render <$> ipv4AddressGrammar.generator
+      , renderGenerator ipv4AddressGrammar
       ]
 
 ipv4AddressGrammar ∷ Grammar Text
@@ -432,11 +474,11 @@ ipv4AddressGrammar =
                 . TB.toLazyText
                 . fold
                 . List.intersperse "."
-                . fmap render
             )
-            $ replicateM 4 gecOctetGrammar.arbitrary
+            $ replicateM 4 (renderGenerator decOctetGrammar)
       }
 
+regNameGrammar :: Grammar Text
 regNameGrammar =
   label
     "reg-name"
@@ -447,11 +489,16 @@ regNameGrammar =
             P.match $
               P.many $
                 asum @[]
-                  [ void $ unreservedGrammar.parser
-                  , void $ pctEncodedGrammar.parser
-                  , void $ subDelimGrammar.parser
+                  [ void $ parser unreservedGrammar
+                  , void $ parser pctEncodedGrammar
+                  , void $ parser subDelimGrammar
                   ]
-      , generator = _
+      , generator = fmap (TL.toStrict . TB.toLazyText . fold) $ QC.listOf
+          $ QC.oneof [
+            renderGenerator unreservedGrammar
+            ,renderGenerator pctEncodedGrammar,
+            renderGenerator subDelimGrammar
+          ]
       }
 
 data Path
@@ -460,56 +507,55 @@ data Path
   | Path_Noscheme PathNoscheme
   | Path_Rootless PathRootless
   | Path_Empty PathEmpty
-  deriving stock Generic
-  deriving Arbitrary via GenericArbitrary Path
+  deriving Arbitrary via TheGrammar Path
 
-instance Grammar Path
+instance HasGrammar Path
 
 newtype PathAbempty = PathAbempty [Segment]
   deriving stock Generic
-  deriving Arbitrary via GenericArbitrary PathAbempty
+  deriving Arbitrary via TheGrammar PathAbempty
 
-instance Grammar PathAbempty
+instance HasGrammar PathAbempty
 
 data PathAbsolute = PathAbsolute SegmentNz [Segment]
   deriving stock Generic
   deriving Arbitrary via GenericArbitrary PathAbsolute
 
-instance Grammar PathAbsolute
+instance HasGrammar PathAbsolute
 
 data PathNoscheme = PathNoscheme SegmentNzNc [Segment]
   deriving stock Generic
   deriving Arbitrary via GenericArbitrary PathNoscheme
 
-instance Grammar PathNoscheme
+instance HasGrammar PathNoscheme
 
 data PathRootless = PathRootless SegmentNz [Segment]
   deriving stock Generic
   deriving Arbitrary via GenericArbitrary PathRootless
 
-instance Grammar PathRootless
+instance HasGrammar PathRootless
 
 data PathEmpty = PathEmpty
   deriving stock Generic
   deriving Arbitrary via GenericArbitrary PathEmpty
 
-instance Grammar PathEmpty
+instance HasGrammar PathEmpty
 
 newtype Segment = SegmentUnsafe {text ∷ Text}
 
-instance Grammar Segment
+instance HasGrammar Segment
 
 instance Arbitrary Segment
 
 newtype SegmentNz = SegmentNzUnsafe {text ∷ Text}
 
-instance Grammar SegmentNz
+instance HasGrammar SegmentNz
 
 instance Arbitrary SegmentNz
 
 newtype SegmentNzNc = SegmentNzNcUnsafe {text ∷ Text}
 
-instance Grammar SegmentNzNc
+instance HasGrammar SegmentNzNc
 
 instance Arbitrary SegmentNzNc
 
@@ -520,13 +566,13 @@ pctEncodedGrammar =
     Grammar
       { render = \x →
           TB.singleton '%'
-            <> render (HexdigUnsafe @'UpperCase $ x.byte `shiftR` 4)
-            <> render (HexdigUnsafe @'UpperCase $ x.byte .&. 15)
+            <> render (hexdigNumGrammar UpperCase) ( x `shiftR` 4)
+            <> render (hexdigNumGrammar UpperCase) ( x .&. 15)
       , parser = do
           P.single '%'
-          a ← hexdigGrammar.parser
-          b ← hexdigGrammar.parser
-          pure $ PctEncoded $ (a.byte `shiftL` 4) + b.byte
+          a ← parser $ hexdigNumGrammar UpperCase
+          b ← parser $ hexdigNumGrammar UpperCase
+          pure $  (a `shiftL` 4) + b
       , generator = arbitrary
       }
 
@@ -536,7 +582,11 @@ unreservedGrammar =
     "unreserved"
     Grammar
       { render = TB.singleton
-      , parser = alpha.parser <|> digit.parser <|> unreservedSymbolGrammar.parser
+      , parser = asum @[]
+          [ parser alphaGrammar
+          , parser   digitGrammar
+          , parser  unreservedSymbolGrammar
+          ]
       , generator =
           QC.oneof
             [ alphaGrammar.generator
@@ -547,16 +597,19 @@ unreservedGrammar =
  where
   unreservedSymbolGrammar = tokenEnumeration "-._~"
 
-reservedGrammar = label "reserved" $ tokenEnumeration $ genDelims ++ subDelims
+reservedGrammar = label "reserved" $ tokenEnumeration $ genDelims <> subDelims
 
 genDelimGrammar ∷ Grammar Char
 genDelimGrammar = label "gen-delims" $ tokenEnumeration genDelims
 
+
+genDelims :: [Char]
 genDelims = ":/?#[]@"
 
 subDelimGrammar ∷ Grammar Char
 subDelimGrammar = label "sub-delims" $ tokenEnumeration subDelims
 
+subDelims :: [Char]
 subDelims = "!$&'()*+,;="
 
 decOctetGrammar ∷ Grammar Word8
@@ -567,7 +620,13 @@ decOctetGrammar =
       { render = TB.decimal
       , parser = do
           xs ← some digitNumGrammar.parser
-          let n ∷ Natural = foldl' (\t x → (t * 10) + fromIntegral x.byte) 0 xs
+          let n ∷ Natural = foldl' (\t x → (t * 10) + fromIntegral x) 0 xs
           maybe empty pure $ toIntegralSized n
       , generator = arbitrary
       }
+
+queryGrammar :: Grammar Text
+queryGrammar = _
+
+fragmentGrammar :: Grammar Text
+fragmentGrammar = _

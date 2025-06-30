@@ -49,6 +49,26 @@ data Grammar a
   , generator ∷ Gen a
   }
 
+class HasGrammar a where
+  grammar :: Grammar a
+
+newtype TheGrammar a = TheGrammar a
+
+instance HasGrammar a => Arbitrary (TheGrammar a) where
+  arbitrary = TheGrammar <$> grammar.generator
+
+render :: Grammar a -> a -> TB.Builder
+render  = (.render)
+
+parser :: Grammar a -> Parsec Void Text a
+parser = (.parser)
+
+generator :: Grammar a -> Gen a
+generator = (.generator)
+
+renderGenerator :: Grammar a -> Gen TB.Builder
+renderGenerator g = g.render <$> g.generator
+
 label ∷ String → Grammar a → Grammar a
 label l g = g {parser = P.label l g.parser}
 
