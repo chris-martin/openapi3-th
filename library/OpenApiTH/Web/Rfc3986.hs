@@ -45,6 +45,7 @@ import Text.Megaparsec.Char.Lexer qualified as P
 import Text.Show (show)
 import Prelude (fromIntegral, (*), (+), (-))
 
+import Data.List.NonEmpty (NonEmpty ((:|)), nonEmpty)
 import OpenApiTH.Grammar
 import OpenApiTH.Web.Rfc2234
 
@@ -487,20 +488,40 @@ regNameGrammar =
       )
 
 data Path
-  = Path_Abempty [Text] -- PathAbempty
-  | Path_Absolute [Text] -- PathAbsolute
-  | Path_Noscheme [Text] -- PathNoscheme
-  | Path_Rootless [Text] -- PathRootless
-  | Path_Empty -- PathEmpty
+  = Path_Empty
+  | Path_Absolute [Text]
+  | Path_Relative (NonEmpty Text)
   deriving Arbitrary via TheGrammar Path
 
 instance HasGrammar Path where
   grammar =
-    Grammar
-      { render = _
-      , parser = _
-      , generator = _
-      }
+    label
+      "path"
+      Grammar
+        { render = \case
+            Path_Empty → mempty
+            Path_Absolute x →
+              foldMap (\s → "/" <> segmentGrammar.render s) x
+            Path_Relative (x :| xs) →
+              TB.fromText x
+                <> foldMap (\s → "/" <> segmentGrammar.render s) xs
+        , parser =
+            asum @[]
+              [ Path_Abempty <$> pathAbemptyGrammar.parser
+              , Path_Absolute <$> pathAbsoluteGrammar.parser
+              , Path_Noscheme <$> pathNoschemeGrammar.parser
+              , Path_Rootless <$> pathRootlessGrammar.parser
+              , pure Path_Empty
+              ]
+        , generator =
+            QC.oneof
+              [ pure Path_Empty
+              , Path_Absolute <$> pathAbemptyGrammar.generator
+              , Path_Absolute <$> pathAbsoluteGrammar.generator
+              , Path_Relative <$> pathNoschemeGrammar.generator
+              , Path_Relative <$> pathRootlessGrammar.generator
+              ]
+        }
 
 pathAbemptyGrammar ∷ Grammar [Text]
 pathAbemptyGrammar =
@@ -539,7 +560,7 @@ pathAbsoluteGrammar =
       }
 
 -- data PathNoscheme = PathNoscheme SegmentNzNc [Segment]
-pathNoschemeGrammar ∷ Grammar [Text]
+pathNoschemeGrammar ∷ Grammar (NonEmpty Text)
 pathNoschemeGrammar =
   Grammar
     { render = _
@@ -548,7 +569,7 @@ pathNoschemeGrammar =
     }
 
 -- data PathRootless = PathRootless SegmentNz [Segment]
-pathRootlessGrammar ∷ Grammar [Text]
+pathRootlessGrammar ∷ Grammar (NonEmpty Text)
 pathRootlessGrammar =
   Grammar
     { render = _
