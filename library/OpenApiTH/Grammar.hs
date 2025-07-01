@@ -23,6 +23,7 @@ import Data.String (IsString (..))
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
+import Data.Text.Lazy qualified as TL
 import Data.Text.Lazy.Builder qualified as TB
 import Data.Tuple
 import Data.Vector qualified as V
@@ -50,23 +51,23 @@ data Grammar a
   }
 
 class HasGrammar a where
-  grammar :: Grammar a
+  grammar ∷ Grammar a
 
 newtype TheGrammar a = TheGrammar a
 
-instance HasGrammar a => Arbitrary (TheGrammar a) where
+instance HasGrammar a ⇒ Arbitrary (TheGrammar a) where
   arbitrary = TheGrammar <$> grammar.generator
 
-render :: Grammar a -> a -> TB.Builder
-render  = (.render)
+render ∷ Grammar a → a → TB.Builder
+render = (.render)
 
-parser :: Grammar a -> Parsec Void Text a
+parser ∷ Grammar a → Parsec Void Text a
 parser = (.parser)
 
-generator :: Grammar a -> Gen a
+generator ∷ Grammar a → Gen a
 generator = (.generator)
 
-renderGenerator :: Grammar a -> Gen TB.Builder
+renderGenerator ∷ Grammar a → Gen TB.Builder
 renderGenerator g = g.render <$> g.generator
 
 label ∷ String → Grammar a → Grammar a
@@ -86,4 +87,12 @@ tokenPredicate f generator =
     { parser = P.satisfy f
     , render = TB.singleton
     , generator
+    }
+
+textGrammar ∷ Parsec Void Text () → Gen TB.Builder → Grammar Text
+textGrammar p g =
+  Grammar
+    { parser = fmap fst $ P.match p
+    , generator = fmap (TL.toStrict . TB.toLazyText) g
+    , render = TB.fromText
     }
