@@ -87,6 +87,7 @@ library
     Oath.Operation.Wai
     Oath.Relation
     Oath.Uri.Rfc3986.Grammar
+    Oath.Uri.Rfc3986.RelativeResolution
     Oath.Web.JsonReference
     Oath.Web.ResourceLocation
 
