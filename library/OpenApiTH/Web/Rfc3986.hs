@@ -86,7 +86,7 @@ instance HasGrammar Uri where
 data HierPart
   = HierPart_Authority Authority [Text]
   | HierPart_Absolute [Text]
-  | HierPart_Rootless [Text]
+  | HierPart_Rootless (NonEmpty Text)
   | HierPart_Empty
   deriving Arbitrary via TheGrammar HierPart
 
@@ -203,7 +203,7 @@ instance HasGrammar RelativeRef where
 data RelativePart
   = RelativePart_Authority Authority [Text]
   | RelativePart_Absolute [Text]
-  | RelativePart_Noscheme [Text]
+  | RelativePart_Noscheme (NonEmpty Text)
   | RelativePart_Empty
   deriving stock Generic
   deriving Arbitrary via TheGrammar RelativePart
@@ -244,7 +244,7 @@ schemeGrammar =
             asum @[]
               [ void $ parser alphaGrammar
               , void $ parser digitGrammar
-              , void $ parser schemeSymbolGrammar
+              , void $ parser etc
               ]
           pure ()
       )
@@ -255,12 +255,12 @@ schemeGrammar =
               ( QC.oneof
                   [ generator alphaGrammar
                   , generator digitGrammar
-                  , generator schemeSymbolGrammar
+                  , generator etc
                   ]
               )
       )
  where
-  schemeSymbolGrammar = tokenEnumeration "+-."
+  etc = tokenEnumeration "+-."
 
 data Authority = Authority
   { userinfo ∷ Maybe Text
@@ -487,42 +487,6 @@ regNameGrammar =
               ]
       )
 
-data Path
-  = Path_Empty
-  | Path_Absolute [Text]
-  | Path_Relative (NonEmpty Text)
-  deriving Arbitrary via TheGrammar Path
-
-instance HasGrammar Path where
-  grammar =
-    label
-      "path"
-      Grammar
-        { render = \case
-            Path_Empty → mempty
-            Path_Absolute x →
-              foldMap (\s → "/" <> segmentGrammar.render s) x
-            Path_Relative (x :| xs) →
-              TB.fromText x
-                <> foldMap (\s → "/" <> segmentGrammar.render s) xs
-        , parser =
-            asum @[]
-              [ Path_Abempty <$> pathAbemptyGrammar.parser
-              , Path_Absolute <$> pathAbsoluteGrammar.parser
-              , Path_Noscheme <$> pathNoschemeGrammar.parser
-              , Path_Rootless <$> pathRootlessGrammar.parser
-              , pure Path_Empty
-              ]
-        , generator =
-            QC.oneof
-              [ pure Path_Empty
-              , Path_Absolute <$> pathAbemptyGrammar.generator
-              , Path_Absolute <$> pathAbsoluteGrammar.generator
-              , Path_Relative <$> pathNoschemeGrammar.generator
-              , Path_Relative <$> pathRootlessGrammar.generator
-              ]
-        }
-
 pathAbemptyGrammar ∷ Grammar [Text]
 pathAbemptyGrammar =
   label
@@ -559,55 +523,70 @@ pathAbsoluteGrammar =
                 <*> QC.vectorOf (n - 1) segmentGrammar.generator
       }
 
--- data PathNoscheme = PathNoscheme SegmentNzNc [Segment]
 pathNoschemeGrammar ∷ Grammar (NonEmpty Text)
 pathNoschemeGrammar =
-  Grammar
-    { render = _
-    , parser = _
-    , generator = _
-    }
+  label
+    "path-noscheme"
+    Grammar
+      { render = \(x :| xs) →
+          render segmentNzNcGrammar x
+            <> foldMap (\s → "/" <> render segmentGrammar s) xs
+      , parser = do
+          x ← parser segmentNzNcGrammar
+          xs ← P.many $ P.single '/' *> parser segmentGrammar
+          pure $ x :| xs
+      , generator = do
+          x ← generator segmentNzNcGrammar
+          xs ← QC.listOf $ generator segmentGrammar
+          pure $ x :| xs
+      }
 
--- data PathRootless = PathRootless SegmentNz [Segment]
 pathRootlessGrammar ∷ Grammar (NonEmpty Text)
 pathRootlessGrammar =
-  Grammar
-    { render = _
-    , parser = _
-    , generator = _
-    }
+  label
+    "path-rootless"
+    Grammar
+      { render = \(x :| xs) →
+          render segmentNzGrammar x
+            <> foldMap (\s → "/" <> render segmentGrammar s) xs
+      , parser = do
+          x ← parser segmentNzGrammar
+          xs ← P.many $ P.single '/' *> parser segmentGrammar
+          pure $ x :| xs
+      , generator = do
+          x ← generator segmentNzGrammar
+          xs ← QC.listOf $ generator segmentGrammar
+          pure $ x :| xs
+      }
 
 pathEmptyGrammar ∷ Grammar ()
 pathEmptyGrammar =
   Grammar
-    { render = _
-    , parser = _
-    , generator = _
+    { render = const mempty
+    , parser = pure ()
+    , generator = pure ()
     }
 
 segmentGrammar ∷ Grammar Text
 segmentGrammar =
-  Grammar
-    { render = _
-    , parser = _
-    , generator = _
-    }
+  label "segment" $
+    textGrammar
+      (void $ P.many $ parser pcharGrammar)
+      (fmap fold $ QC.listOf $ renderGenerator pcharGrammar)
 
 segmentNzGrammar ∷ Grammar Text
 segmentNzGrammar =
-  Grammar
-    { render = _
-    , parser = _
-    , generator = _
-    }
+  label "segment-nz" $
+    textGrammar
+      (void $ P.some $ parser pcharGrammar)
+      (fmap fold $ QC.listOf1 $ renderGenerator pcharGrammar)
 
 segmentNzNcGrammar ∷ Grammar Text
 segmentNzNcGrammar =
-  Grammar
-    { render = _
-    , parser = _
-    , generator = _
-    }
+  label "segment-nz-nc" $
+    textGrammar
+      (void $ P.some $ parser segmentNcCharGrammar)
+      (fmap fold $ QC.listOf1 $ renderGenerator segmentNcCharGrammar)
 
 pctEncodedGrammar ∷ Grammar Word8
 pctEncodedGrammar =
@@ -636,17 +615,17 @@ unreservedGrammar =
           asum @[]
             [ parser alphaGrammar
             , parser digitGrammar
-            , parser unreservedSymbolGrammar
+            , parser etc
             ]
       , generator =
           QC.oneof
-            [ alphaGrammar.generator
-            , digitGrammar.generator
-            , unreservedSymbolGrammar.generator
+            [ generator alphaGrammar
+            , generator digitGrammar
+            , generator etc
             ]
       }
  where
-  unreservedSymbolGrammar = tokenEnumeration "-._~"
+  etc = tokenEnumeration "-._~"
 
 reservedGrammar = label "reserved" $ tokenEnumeration $ genDelims <> subDelims
 
@@ -676,7 +655,68 @@ decOctetGrammar =
       }
 
 queryGrammar ∷ Grammar Text
-queryGrammar = _
+queryGrammar = label "query" queryOrFragmentGrammar
 
 fragmentGrammar ∷ Grammar Text
-fragmentGrammar = _
+fragmentGrammar = label "fragment" queryOrFragmentGrammar
+
+queryOrFragmentGrammar ∷ Grammar Text
+queryOrFragmentGrammar =
+  textGrammar
+    ( void $
+        P.many $
+          asum @[]
+            [ void $ parser pcharGrammar
+            , void $ parser etc
+            ]
+    )
+    ( fmap fold $
+        QC.listOf $
+          QC.oneof
+            [ renderGenerator pcharGrammar
+            , renderGenerator etc
+            ]
+    )
+ where
+  etc = tokenEnumeration "/?"
+
+pcharGrammar ∷ Grammar Text
+pcharGrammar =
+  label "pchar" $
+    textGrammar
+      ( asum @[]
+          [ void unreservedGrammar.parser
+          , void pctEncodedGrammar.parser
+          , void subDelimGrammar.parser
+          , void etc.parser
+          ]
+      )
+      ( QC.oneof
+          [ renderGenerator unreservedGrammar
+          , renderGenerator pctEncodedGrammar
+          , renderGenerator subDelimGrammar
+          , renderGenerator etc
+          ]
+      )
+ where
+  etc = tokenEnumeration ":@"
+
+segmentNcCharGrammar ∷ Grammar Text
+segmentNcCharGrammar =
+  textGrammar
+    ( asum @[]
+        [ void unreservedGrammar.parser
+        , void pctEncodedGrammar.parser
+        , void subDelimGrammar.parser
+        , void etc.parser
+        ]
+    )
+    ( QC.oneof
+        [ renderGenerator unreservedGrammar
+        , renderGenerator pctEncodedGrammar
+        , renderGenerator subDelimGrammar
+        , renderGenerator etc
+        ]
+    )
+ where
+  etc = tokenEnumeration ":"
