@@ -84,22 +84,12 @@ library
     OpenApiTH.Operation.Wai
     OpenApiTH.Relation
     OpenApiTH.Web
-    OpenApiTH.Web.Authority
     OpenApiTH.Web.BasicAuthentication
-    OpenApiTH.Web.Host
     OpenApiTH.Web.JsonPointer
     OpenApiTH.Web.JsonReference
-    OpenApiTH.Web.Path
-    OpenApiTH.Web.PercentEncoding
-    OpenApiTH.Web.RelativeReference
-    OpenApiTH.Web.ResourceContext
     OpenApiTH.Web.ResourceLocation
     OpenApiTH.Web.Rfc2234
     OpenApiTH.Web.Rfc3986
-    OpenApiTH.Web.Scheme
-    OpenApiTH.Web.Uri
-    OpenApiTH.Web.UriReference
-    OpenApiTH.Web.UserInfo
 
 test-suite test
   import:         base
