@@ -1,5 +1,5 @@
 -- | https://www.rfc-editor.org/rfc/rfc2234
-module OpenApiTH.Web.Rfc2234 where
+module OpenApiTH.Abnf.Rfc2234 where
 
 import Essentials
 

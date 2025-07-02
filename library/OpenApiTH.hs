@@ -36,4 +36,3 @@ import OpenApiTH.Operation.OutgoingRequest
 import OpenApiTH.Operation.OutgoingResponse
 import OpenApiTH.Operation.Testing
 import OpenApiTH.Operation.Wai
-import OpenApiTH.Web

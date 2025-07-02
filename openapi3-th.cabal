@@ -66,9 +66,12 @@ library
   -- cabal-fmt: expand library
   exposed-modules:
     OpenApiTH
+    OpenApiTH.Abnf.Rfc2234
+    OpenApiTH.BasicAuth.Rfc7617
     OpenApiTH.Declare.Declare
     OpenApiTH.Declare.Options
     OpenApiTH.Grammar
+    OpenApiTH.JsonPointer.Rfc6901
     OpenApiTH.OpenApi
     OpenApiTH.OpenApi.DataType
     OpenApiTH.OpenApi.ReadSpecFile
@@ -83,13 +86,9 @@ library
     OpenApiTH.Operation.Testing
     OpenApiTH.Operation.Wai
     OpenApiTH.Relation
-    OpenApiTH.Web
-    OpenApiTH.Web.BasicAuthentication
-    OpenApiTH.Web.JsonPointer
+    OpenApiTH.Uri.Rfc3986.Grammar
     OpenApiTH.Web.JsonReference
     OpenApiTH.Web.ResourceLocation
-    OpenApiTH.Web.Rfc2234
-    OpenApiTH.Web.Rfc3986
 
 test-suite test
   import:         base

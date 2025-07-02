@@ -1,6 +1,6 @@
 -- | Very straightforward translation of ABNF from
 --   <https://www.ietf.org/rfc/rfc3986.txt>
-module OpenApiTH.Web.Rfc3986 where
+module OpenApiTH.Uri.Rfc3986.Grammar where
 
 import Essentials
 
@@ -46,8 +46,8 @@ import Text.Show (show)
 import Prelude (fromIntegral, (*), (+), (-))
 
 import Data.List.NonEmpty (NonEmpty ((:|)), nonEmpty)
+import OpenApiTH.Abnf.Rfc2234
 import OpenApiTH.Grammar
-import OpenApiTH.Web.Rfc2234
 
 data Uri = Uri
   { scheme ∷ Text

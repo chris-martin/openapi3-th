@@ -1,5 +1,5 @@
 -- | <https://datatracker.ietf.org/doc/html/rfc6901>
-module OpenApiTH.Web.JsonPointer where
+module OpenApiTH.JsonPointer.Rfc6901 where
 
 import Essentials
 

@@ -1,5 +1,5 @@
 -- | <https://www.rfc-editor.org/rfc/rfc7617>
-module OpenApiTH.Web.BasicAuthentication where
+module OpenApiTH.BasicAuth.Rfc7617 where
 
 import Essentials
 
