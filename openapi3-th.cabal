@@ -65,30 +65,30 @@ library
 
   -- cabal-fmt: expand library
   exposed-modules:
-    OpenApiTH
-    OpenApiTH.Abnf.Rfc2234
-    OpenApiTH.BasicAuth.Rfc7617
-    OpenApiTH.Declare.Declare
-    OpenApiTH.Declare.Options
-    OpenApiTH.Grammar
-    OpenApiTH.JsonPointer.Rfc6901
-    OpenApiTH.OpenApi
-    OpenApiTH.OpenApi.DataType
-    OpenApiTH.OpenApi.ReadSpecFile
-    OpenApiTH.OpenApi.Schema
-    OpenApiTH.Operation.HttpClient
-    OpenApiTH.Operation.IncomingRequest
-    OpenApiTH.Operation.IncomingResponse
-    OpenApiTH.Operation.Message
-    OpenApiTH.Operation.Operation
-    OpenApiTH.Operation.OutgoingRequest
-    OpenApiTH.Operation.OutgoingResponse
-    OpenApiTH.Operation.Testing
-    OpenApiTH.Operation.Wai
-    OpenApiTH.Relation
-    OpenApiTH.Uri.Rfc3986.Grammar
-    OpenApiTH.Web.JsonReference
-    OpenApiTH.Web.ResourceLocation
+    Oath
+    Oath.Abnf.Rfc2234
+    Oath.BasicAuth.Rfc7617
+    Oath.Declare.Declare
+    Oath.Declare.Options
+    Oath.Grammar
+    Oath.JsonPointer.Rfc6901
+    Oath.OpenApi
+    Oath.OpenApi.DataType
+    Oath.OpenApi.ReadSpecFile
+    Oath.OpenApi.Schema
+    Oath.Operation.HttpClient
+    Oath.Operation.IncomingRequest
+    Oath.Operation.IncomingResponse
+    Oath.Operation.Message
+    Oath.Operation.Operation
+    Oath.Operation.OutgoingRequest
+    Oath.Operation.OutgoingResponse
+    Oath.Operation.Testing
+    Oath.Operation.Wai
+    Oath.Relation
+    Oath.Uri.Rfc3986.Grammar
+    Oath.Web.JsonReference
+    Oath.Web.ResourceLocation
 
 test-suite test
   import:         base
