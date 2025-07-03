@@ -1,5 +1,13 @@
 -- | https://www.rfc-editor.org/rfc/rfc2234
-module Oath.Abnf.Rfc2234 where
+module Oath.Abnf.Rfc2234 (
+  alphaGrammar,
+  digitGrammar,
+  digitNumGrammar,
+  Case (..),
+  hexdigGrammar,
+  hexdigNumGrammar,
+  hexdigCaseGrammar,
+) where
 
 import Essentials
 

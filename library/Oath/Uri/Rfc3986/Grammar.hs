@@ -1,6 +1,39 @@
 -- | Very straightforward translation of ABNF from
 --   <https://www.ietf.org/rfc/rfc3986.txt>
-module Oath.Uri.Rfc3986.Grammar where
+module Oath.Uri.Rfc3986.Grammar (
+  Uri (..),
+  HierPart (..),
+  UriReference (..),
+  AbsoluteUri (..),
+  RelativeRef (..),
+  RelativePart (..),
+  schemeGrammar,
+  Authority (..),
+  userinfoGrammar,
+  Host (..),
+  portGrammar,
+  IpLiteral (..),
+  ipvFutureGrammar,
+  ipv6AddressGrammar,
+  ipv4AddressGrammar,
+  regNameGrammar,
+  pathAbemptyGrammar,
+  pathNoschemeGrammar,
+  pathRootlessGrammar,
+  pathEmptyGrammar,
+  segmentGrammar,
+  segmentNzGrammar,
+  segmentNzNcGrammar,
+  pctEncodedGrammar,
+  unreservedGrammar,
+  reservedGrammar,
+  genDelimGrammar,
+  subDelimGrammar,
+  decOctetGrammar,
+  queryGrammar,
+  fragmentGrammar,
+  pcharGrammar,
+) where
 
 import Essentials
 
@@ -587,6 +620,24 @@ segmentNzNcGrammar =
     textGrammar
       (void $ P.some $ parser segmentNcCharGrammar)
       (fmap fold $ QC.listOf1 $ renderGenerator segmentNcCharGrammar)
+ where
+  segmentNcCharGrammar =
+    textGrammar
+      ( asum @[]
+          [ void unreservedGrammar.parser
+          , void pctEncodedGrammar.parser
+          , void subDelimGrammar.parser
+          , void etc.parser
+          ]
+      )
+      ( QC.oneof
+          [ renderGenerator unreservedGrammar
+          , renderGenerator pctEncodedGrammar
+          , renderGenerator subDelimGrammar
+          , renderGenerator etc
+          ]
+      )
+  etc = tokenEnumeration ":"
 
 pctEncodedGrammar ∷ Grammar Word8
 pctEncodedGrammar =
@@ -627,6 +678,7 @@ unreservedGrammar =
  where
   etc = tokenEnumeration "-._~"
 
+reservedGrammar ∷ Grammar Char
 reservedGrammar = label "reserved" $ tokenEnumeration $ genDelims <> subDelims
 
 genDelimGrammar ∷ Grammar Char
@@ -700,23 +752,3 @@ pcharGrammar =
       )
  where
   etc = tokenEnumeration ":@"
-
-segmentNcCharGrammar ∷ Grammar Text
-segmentNcCharGrammar =
-  textGrammar
-    ( asum @[]
-        [ void unreservedGrammar.parser
-        , void pctEncodedGrammar.parser
-        , void subDelimGrammar.parser
-        , void etc.parser
-        ]
-    )
-    ( QC.oneof
-        [ renderGenerator unreservedGrammar
-        , renderGenerator pctEncodedGrammar
-        , renderGenerator subDelimGrammar
-        , renderGenerator etc
-        ]
-    )
- where
-  etc = tokenEnumeration ":"

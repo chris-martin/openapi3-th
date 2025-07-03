@@ -46,13 +46,6 @@ import Text.Megaparsec.Char.Lexer qualified as P
 import Text.Show (show)
 import Prelude (fromIntegral)
 
-import Oath.Web.Authority
-import Oath.Web.Host
-import Oath.Web.Path
-import Oath.Web.ResourceContext
-import Oath.Web.Scheme
-import Oath.Web.UserInfo
-
 -- | todo: Remodel this as "UriReference without a query or fragment"
 data ResourceLocation = ResourceLocation
   { scheme ∷ Maybe Text
@@ -77,25 +70,6 @@ instance Semigroup ResourceLocation where
 
 instance Monoid ResourceLocation where
   mempty = ResourceLocation {scheme = Nothing, context = RelativeContext, path = Empty}
-
-readResourceLocation ∷ Text → Either [Text] ResourceLocation
-readResourceLocation x =
-  first ((: []) . Text.pack . show) $
-    P.parse (resourceLocationP <* P.eof) "" x
-
-resourceLocationP ∷ P.Parsec Void Text ResourceLocation
-resourceLocationP = do
-  scheme ← P.optional $ schemeP <* P.single ':'
-  context ← contextP
-  path ← pathP
-  pure ResourceLocation {scheme, context, path}
-
-resourceLocationG ∷ Gen ResourceLocation
-resourceLocationG = do
-  scheme ← QC.liftArbitrary schemeG
-  context ← arbitrary
-  path ← pathG
-  pure ResourceLocation {scheme, context, path}
 
 resourceLocationQQ ∷ QuasiQuoter
 resourceLocationQQ =
