@@ -48,6 +48,7 @@ library
     , megaparsec
     , monad-validate
     , mtl
+    , nonempty-containers
     , optics
     , quaalude
     , QuickCheck

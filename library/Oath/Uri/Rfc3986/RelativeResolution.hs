@@ -10,8 +10,11 @@ module Oath.Uri.Rfc3986.RelativeResolution (
 
 import Essentials
 
+import Control.Applicative ((<|>))
 import Data.Foldable (toList)
 import Data.Sequence (Seq (..))
+import Data.Sequence.NonEmpty (NESeq)
+import Data.Sequence.NonEmpty qualified as NESeq
 import Data.Text (Text)
 
 import Oath.Uri.Rfc3986.Grammar (AbsoluteUri (..), Authority (..))
@@ -45,15 +48,15 @@ uriReferenceFromGrammar = \case
    where
     scheme = Just x.scheme
     (authority, path) = fromHierPart x.hierPart
-  G.UriReference_RelativeRef x@G.RelativeRef{query,fragment} →
-    UriReference{scheme, authority, path, query, fragment}
+  G.UriReference_RelativeRef x@G.RelativeRef {query, fragment} →
+    UriReference {scheme, authority, path, query, fragment}
    where
-    scheme=Nothing
-    (authority,path) = fromRelativePart x.relativePart
+    scheme = Nothing
+    (authority, path) = fromRelativePart x.relativePart
 
-data Path
-  = PathRelative [Text]
-  | PathAbsolute [Text]
+data PathRoot = PathRelative | PathAbsolute
+
+data Path = Path {root ∷ PathRoot, segments ∷ Seq Text}
 
 data Uri = Uri
   { scheme ∷ Text
@@ -65,27 +68,68 @@ data Uri = Uri
 
 fromHierPart ∷ G.HierPart → (Maybe Authority, Path)
 fromHierPart = \case
-  G.HierPart_Authority a p → (Just a, PathAbsolute p)
-  G.HierPart_Absolute p → (Nothing, PathAbsolute p)
-  G.HierPart_Rootless p → (Nothing, PathRelative $ toList p)
-  G.HierPart_Empty → (Nothing, PathRelative [])
+  G.HierPart_Authority a p → (Just a, Path PathAbsolute p)
+  G.HierPart_Absolute p → (Nothing, Path PathAbsolute p)
+  G.HierPart_Rootless p → (Nothing, Path PathRelative $ NESeq.toSeq p)
+  G.HierPart_Empty → (Nothing, Path PathRelative [])
 
-fromRelativePart :: G.RelativePart -> (Maybe Authority, Path)
+fromRelativePart ∷ G.RelativePart → (Maybe Authority, Path)
 fromRelativePart = \case
-  G.RelativePart_Authority a p -> (Just a, PathAbsolute p)
-  G.RelativePart_Absolute p -> (Nothing, PathAbsolute p)
-  G.RelativePart_Noscheme p -> (Nothing, PathRelative $ toList p)
-  G.RelativePart_Empty -> (Nothing, PathRelative [])
+  G.RelativePart_Authority a p → (Just a, Path PathAbsolute p)
+  G.RelativePart_Absolute p → (Nothing, Path PathAbsolute p)
+  G.RelativePart_Noscheme p → (Nothing, Path PathRelative $ NESeq.toSeq p)
+  G.RelativePart_Empty → (Nothing, Path PathRelative [])
 
+-- | Section 5.2.2, Transform References
 resolveUriReference ∷ BaseUri → UriReference → Uri
-resolveUriReference b r = _
+resolveUriReference base r
+  | Just scheme ← r.scheme =
+      Uri
+        { scheme
+        , authority = r.authority
+        , path = removeDotSegments r.path
+        , query = r.query
+        , fragment = r.fragment
+        }
+  | Just authority ← r.authority =
+      Uri
+        { scheme = base.scheme
+        , authority = Just authority
+        , path = removeDotSegments r.path
+        , query = r.query
+        , fragment = r.fragment
+        }
+  | Path {root = PathRelative, segments = Empty} ← r.path =
+      Uri
+        { scheme = base.scheme
+        , authority = base.authority
+        , path = base.path
+        , query = r.query <|> base.query
+        , fragment = r.fragment
+        }
+  | otherwise =
+      Uri
+        { scheme = base.scheme
+        , authority = base.authority
+        , path = removeDotSegments $ base.path <> r.path
+        , query = r.query
+        , fragment = r.fragment
+        }
 
--- | Section 5.2.3, Merge Paths
--- mergePaths :: Uri -> UriReference -> _
+-- | Section 5.2.3, Merge Paths, sort of
+instance Semigroup Path where
+  _ <> x@Path {root = PathAbsolute} = x
+  Path {root, segments = Empty} <> Path {segments} =
+    Path {root, segments}
+  Path {root, segments = base :|> _} <> Path {segments = r} =
+    Path {root, segments = base <> r}
+
+instance Monoid Path where
+  mempty = Path PathRelative Empty
 
 -- | Section 5.2.4, Remove Dot Segments
-removeDotSegments ∷ Seq Text → Seq Text
-removeDotSegments = go Empty
+removeDotSegments ∷ Path → Path
+removeDotSegments p = p {segments = go Empty p.segments}
  where
   go t = \case
     Empty → t

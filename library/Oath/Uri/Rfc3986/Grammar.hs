@@ -54,6 +54,8 @@ import Data.Function (const)
 import Data.List qualified as List
 import Data.Sequence (Seq (..))
 import Data.Sequence qualified as Seq
+import Data.Sequence.NonEmpty (NESeq (..))
+import Data.Sequence.NonEmpty qualified as NESeq
 import Data.String (IsString (..))
 import Data.Text (Text)
 import Data.Text qualified as Text
@@ -117,9 +119,9 @@ instance HasGrammar Uri where
         }
 
 data HierPart
-  = HierPart_Authority Authority [Text]
-  | HierPart_Absolute [Text]
-  | HierPart_Rootless (NonEmpty Text)
+  = HierPart_Authority Authority (Seq Text)
+  | HierPart_Absolute (Seq Text)
+  | HierPart_Rootless (NESeq Text)
   | HierPart_Empty
   deriving Arbitrary via TheGrammar HierPart
 
@@ -234,9 +236,9 @@ instance HasGrammar RelativeRef where
         }
 
 data RelativePart
-  = RelativePart_Authority Authority [Text]
-  | RelativePart_Absolute [Text]
-  | RelativePart_Noscheme (NonEmpty Text)
+  = RelativePart_Authority Authority (Seq Text)
+  | RelativePart_Absolute (Seq Text)
+  | RelativePart_Noscheme (NESeq Text)
   | RelativePart_Empty
   deriving stock Generic
   deriving Arbitrary via TheGrammar RelativePart
@@ -520,76 +522,76 @@ regNameGrammar =
               ]
       )
 
-pathAbemptyGrammar ∷ Grammar [Text]
+pathAbemptyGrammar ∷ Grammar (Seq Text)
 pathAbemptyGrammar =
   label
     "path-abempty"
     Grammar
       { render = foldMap (\s → "/" <> segmentGrammar.render s)
-      , parser = many (P.single '/' *> segmentGrammar.parser)
-      , generator = QC.listOf segmentGrammar.generator
+      , parser = fmap Seq.fromList $ many $ P.single '/' *> segmentGrammar.parser
+      , generator = fmap Seq.fromList $ QC.listOf segmentGrammar.generator
       }
 
-pathAbsoluteGrammar ∷ Grammar [Text]
+pathAbsoluteGrammar ∷ Grammar (Seq Text)
 pathAbsoluteGrammar =
   label
     "path-absolute"
     Grammar
       { render = \ss →
           "/" <> case ss of
-            [] → mempty
-            x : xs →
+            Empty → mempty
+            x :<| xs →
               segmentNzGrammar.render x
                 <> foldMap (\s → "/" <> segmentGrammar.render s) xs
       , parser = do
           P.single '/'
           x ← segmentNzGrammar.parser
-          xs ← many (P.single '/' *> segmentGrammar.parser)
-          pure $ x : xs
+          xs ← fmap Seq.fromList $ many $ P.single '/' *> segmentGrammar.parser
+          pure $ x :<| xs
       , generator = QC.sized \size → do
           n ← QC.choose (0, size)
           case n of
             0 → pure []
             n →
-              (:)
+              (:<|)
                 <$> segmentNzGrammar.generator
-                <*> QC.vectorOf (n - 1) segmentGrammar.generator
+                <*> fmap Seq.fromList (QC.vectorOf (n - 1) segmentGrammar.generator)
       }
 
-pathNoschemeGrammar ∷ Grammar (NonEmpty Text)
+pathNoschemeGrammar ∷ Grammar (NESeq Text)
 pathNoschemeGrammar =
   label
     "path-noscheme"
     Grammar
-      { render = \(x :| xs) →
+      { render = \(x :<|| xs) →
           render segmentNzNcGrammar x
             <> foldMap (\s → "/" <> render segmentGrammar s) xs
       , parser = do
           x ← parser segmentNzNcGrammar
-          xs ← P.many $ P.single '/' *> parser segmentGrammar
-          pure $ x :| xs
+          xs ← fmap Seq.fromList $ P.many $ P.single '/' *> parser segmentGrammar
+          pure $ x :<|| xs
       , generator = do
           x ← generator segmentNzNcGrammar
-          xs ← QC.listOf $ generator segmentGrammar
-          pure $ x :| xs
+          xs ← fmap Seq.fromList $ QC.listOf $ generator segmentGrammar
+          pure $ x :<|| xs
       }
 
-pathRootlessGrammar ∷ Grammar (NonEmpty Text)
+pathRootlessGrammar ∷ Grammar (NESeq Text)
 pathRootlessGrammar =
   label
     "path-rootless"
     Grammar
-      { render = \(x :| xs) →
+      { render = \(x :<|| xs) →
           render segmentNzGrammar x
             <> foldMap (\s → "/" <> render segmentGrammar s) xs
       , parser = do
           x ← parser segmentNzGrammar
-          xs ← P.many $ P.single '/' *> parser segmentGrammar
-          pure $ x :| xs
+          xs ← fmap Seq.fromList $ P.many $ P.single '/' *> parser segmentGrammar
+          pure $ x :<|| xs
       , generator = do
           x ← generator segmentNzGrammar
-          xs ← QC.listOf $ generator segmentGrammar
-          pure $ x :| xs
+          xs ← fmap Seq.fromList $ QC.listOf $ generator segmentGrammar
+          pure $ x :<|| xs
       }
 
 pathEmptyGrammar ∷ Grammar ()
