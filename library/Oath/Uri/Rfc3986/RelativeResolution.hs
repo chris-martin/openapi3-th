@@ -19,6 +19,7 @@ import Data.Text (Text)
 
 import Oath.Uri.Rfc3986.Grammar (AbsoluteUri (..), Authority (..))
 import Oath.Uri.Rfc3986.Grammar qualified as G
+import Data.Either (Either (..))
 
 data BaseUri = BaseUri
   { scheme ∷ Text
@@ -65,6 +66,21 @@ data Uri = Uri
   , query ∷ Maybe Text
   , fragment ∷ Maybe Text
   }
+
+uriToGrammar ∷ Uri → Either InvalidHierPart G.Uri
+uriToGrammar x@Uri {scheme, query, fragment} = do
+  hierPart <- toHierPart (x.authority, x.path)
+  pure G.Uri {scheme, hierPart, query, fragment}
+
+toHierPart ∷ (Maybe Authority, Path)
+ → Either InvalidHierPart G.HierPart
+toHierPart = \case
+  (Just a,Path PathAbsolute p) -> pure $ G.HierPart_Authority a p
+  (Just{},Path PathRelative _) -> Left AuthorityWithRelativePath
+  (Nothing, Path PathAbsolute p) -> _
+  (Nothing, Path PathRelative p) -> _
+
+data InvalidHierPart = AuthorityWithRelativePath
 
 fromHierPart ∷ G.HierPart → (Maybe Authority, Path)
 fromHierPart = \case
