@@ -1,5 +1,6 @@
 -- | https://www.rfc-editor.org/rfc/rfc2234
 module Oath.Abnf.Rfc2234 (
+  char,
   alphaGrammar,
   digitGrammar,
   digitNumGrammar,
@@ -19,6 +20,7 @@ import Data.Bifunctor (first)
 import Data.Bool (not, (&&), (||))
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
+import Data.ByteString.Builder qualified as BSB
 import Data.Char (Char)
 import Data.Char qualified as Char
 import Data.Either (Either (..), either)
@@ -44,31 +46,41 @@ import Test.QuickCheck qualified as QC
 import Test.QuickCheck.Arbitrary.Generic
 import Text.Megaparsec (Parsec)
 import Text.Megaparsec qualified as P
-import Text.Megaparsec.Char.Lexer qualified as P
+import Text.Megaparsec.Byte.Lexer qualified as P
 import Text.Show (show)
 import Prelude (Num ((+), (-)), fromIntegral)
 
 import Oath.Grammar
 
-alphaGrammar ∷ Grammar Char
+char ∷ Char → Word8
+char = fromIntegral . Char.ord
+
+alphaGrammar ∷ Grammar Word8
 alphaGrammar =
   label "ALPHA" $
     tokenPredicate
-      (\x → (x >= 'a' && x <= 'z') || (x >= 'A' && x <= 'Z'))
-      (QC.oneof [QC.choose ('a', 'z'), QC.choose ('A', 'Z')])
+      ( \x →
+          (x >= char 'a' && x <= char 'z')
+            || (x >= char 'A' && x <= char 'Z')
+      )
+      ( QC.oneof
+          [ QC.choose (char 'a', char 'z')
+          , QC.choose (char 'A', char 'Z')
+          ]
+      )
 
-digitGrammar ∷ Grammar Char
+digitGrammar ∷ Grammar Word8
 digitGrammar =
   label "DIGIT" $
     tokenPredicate
-      (\x → x >= '0' && x <= '9')
-      (QC.choose ('0', '9'))
+      (\x → x >= char '0' && x <= char '0')
+      (QC.choose (char '0', char '0'))
 
 digitNumGrammar ∷ Grammar Word8
 digitNumGrammar =
   Grammar
-    { render = \x → TB.singleton $ Char.chr $ Char.ord '0' + fromIntegral x
-    , parser = (\x → fromIntegral $ Char.ord x - Char.ord '0') <$> digitGrammar.parser
+    { render = \x → BSB.char8 $ Char.chr $ Char.ord '0' + fromIntegral x
+    , parser = (\x → x - char '0') <$> digitGrammar.parser
     , generator = QC.choose (0, 9)
     }
 
@@ -76,35 +88,34 @@ data Case = UpperCase | LowerCase
   deriving stock (Eq, Ord, Show, Enum, Bounded, Generic)
   deriving Arbitrary via GenericArbitrary Case
 
-caseA ∷ Case → Char
+caseA ∷ Case → Word8
 caseA = fst . caseAF
 
-caseAF ∷ Case → (Char, Char)
+caseAF ∷ Case → (Word8, Word8)
 caseAF = \case
-  UpperCase → ('A', 'F')
-  LowerCase → ('a', 'f')
+  UpperCase → (char 'A', char 'F')
+  LowerCase → (char 'a', char 'f')
 
-isHexLetterInCase ∷ Case → Char → Bool
+isHexLetterInCase ∷ Case → Word8 → Bool
 isHexLetterInCase c x = let (a, f) = caseAF c in x >= a && x <= f
 
-hexdigToChar ∷ Case → Word8 → Char
+hexdigToChar ∷ Case → Word8 → Word8
 hexdigToChar c x =
-  Char.chr $
-    Char.ord (if x < 10 then '0' else caseA c) + fromIntegral x
+  x + (if x < 10 then char '0' else caseA c)
 
-hexLetterNumParserInCase ∷ Case → Parsec Void Text Word8
+hexLetterNumParserInCase ∷ Case → Parsec Void ByteString Word8
 hexLetterNumParserInCase c =
   let (a, f) = caseAF c
    in fmap
-        (\x → fromIntegral $ Char.ord x - Char.ord a + 10)
+        (\x → x - a + 10)
         $ P.satisfy (\x → x >= a && x <= f)
 
-hexdigGrammar ∷ Grammar Char
+hexdigGrammar ∷ Grammar Word8
 hexdigGrammar =
   label
     "HEXDIG"
     Grammar
-      { render = TB.singleton
+      { render = BSB.word8
       , parser = digitGrammar.parser <|> hexLetterGrammar.parser
       , generator = hexdigToChar <$> arbitrary <*> QC.choose (0, 15)
       }
@@ -117,25 +128,27 @@ hexdigNumGrammar c =
   label
     "HEXDIG"
     Grammar
-      { render = TB.singleton . hexdigToChar c
-      , parser = digitNumGrammar.parser <|> (hexLetterNumGrammar c).parser
+      { render = BSB.word8 . hexdigToChar c
+      , parser =
+          digitNumGrammar.parser
+            <|> (hexLetterNumGrammar c).parser
       , generator = QC.choose (0, 15)
       }
 
 hexdigCaseGrammar
   ∷ Case
   -- ^ For rendering and generating; parsing is lenient but is converted to this case
-  → Grammar Char
+  → Grammar Word8
 hexdigCaseGrammar c =
   label
     "HEXDIG"
     Grammar
-      { render = TB.singleton
+      { render = BSB.word8
       , parser = digitGrammar.parser <|> (hexLetterCaseGrammar c).parser
       , generator = hexdigToChar c <$> QC.choose (0, 15)
       }
 
-hexLetterGrammar ∷ Grammar Char
+hexLetterGrammar ∷ Grammar Word8
 hexLetterGrammar =
   tokenPredicate
     (\x → isHexLetterInCase LowerCase x || isHexLetterInCase UpperCase x)
@@ -144,19 +157,19 @@ hexLetterGrammar =
 hexLetterCaseGrammar
   ∷ Case
   -- ^ For rendering and generating; parsing is lenient but is converted to this case
-  → Grammar Char
+  → Grammar Word8
 hexLetterCaseGrammar c =
   Grammar
-    { render = TB.singleton
+    { render = BSB.word8
     , parser =
         asum @[]
           [ P.satisfy $ isHexLetterInCase c
           , case c of
               LowerCase →
-                fmap (\x → Char.chr $ Char.ord x - Char.ord 'A' + Char.ord 'a') $
+                fmap (\x → x - char 'A' + char 'a') $
                   P.satisfy (isHexLetterInCase UpperCase)
               UpperCase →
-                fmap (\x → Char.chr $ Char.ord x - Char.ord 'a' + Char.ord 'A') $
+                fmap (\x → x - char 'a' + char 'A') $
                   P.satisfy (isHexLetterInCase LowerCase)
           ]
     , generator = QC.choose $ caseAF c
@@ -168,10 +181,7 @@ hexLetterNumGrammar
   → Grammar Word8
 hexLetterNumGrammar c =
   Grammar
-    { render = \x →
-        TB.singleton $
-          Char.chr $
-            Char.ord (caseA c) + fromIntegral x
+    { render = \x → BSB.word8 $ caseA c + x
     , parser =
         hexLetterNumParserInCase LowerCase
           <|> hexLetterNumParserInCase UpperCase

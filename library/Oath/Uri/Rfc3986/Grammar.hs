@@ -46,6 +46,7 @@ import Data.Bits (shiftL, shiftR, toIntegralSized, (.&.))
 import Data.Bool (not, (&&), (||))
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
+import Data.ByteString.Builder qualified as BSB
 import Data.Char (Char)
 import Data.Char qualified as Char
 import Data.Either (Either (..), either)
@@ -80,15 +81,16 @@ import Text.Megaparsec.Char.Lexer qualified as P
 import Text.Show (show)
 import Prelude (fromIntegral, (*), (+), (-))
 
+import Data.ByteString.Builder (Builder)
 import Data.List.NonEmpty (NonEmpty ((:|)), nonEmpty)
 import Oath.Abnf.Rfc2234
 import Oath.Grammar
 
 data Uri = Uri
-  { scheme ∷ Text
+  { scheme ∷ ByteString
   , hierPart ∷ HierPart
-  , query ∷ Maybe Text
-  , fragment ∷ Maybe Text
+  , query ∷ Maybe ByteString
+  , fragment ∷ Maybe ByteString
   }
   deriving Arbitrary via TheGrammar Uri
 
@@ -105,10 +107,10 @@ instance HasGrammar Uri where
               <> foldMap (\f → "#" <> fragmentGrammar.render f) x.fragment
         , parser = do
             scheme ← parser schemeGrammar
-            P.single ':'
+            P.single $ char ':'
             hierPart ← parser grammar
-            query ← P.optional $ P.single '?' *> parser queryGrammar
-            fragment ← P.optional $ P.single '#' *> parser fragmentGrammar
+            query ← P.optional $ P.single (char '?') *> parser queryGrammar
+            fragment ← P.optional $ P.single (char '#') *> parser fragmentGrammar
             pure Uri {scheme, hierPart, query, fragment}
         , generator = do
             scheme ← schemeGrammar.generator
@@ -119,9 +121,9 @@ instance HasGrammar Uri where
         }
 
 data HierPart
-  = HierPart_Authority Authority (Seq Text)
-  | HierPart_Absolute (Seq Text)
-  | HierPart_Rootless (NESeq Text)
+  = HierPart_Authority Authority (Seq ByteString)
+  | HierPart_Absolute (Seq ByteString)
+  | HierPart_Rootless (NESeq ByteString)
   | HierPart_Empty
   deriving Arbitrary via TheGrammar HierPart
 
@@ -177,9 +179,9 @@ instance HasGrammar UriReference where
       }
 
 data AbsoluteUri = AbsoluteUri
-  { scheme ∷ Text
+  { scheme ∷ ByteString
   , hierPart ∷ HierPart
-  , query ∷ Maybe Text
+  , query ∷ Maybe ByteString
   }
   deriving Arbitrary via TheGrammar AbsoluteUri
 
@@ -195,9 +197,9 @@ instance HasGrammar AbsoluteUri where
               <> foldMap (\q → "?" <> render queryGrammar q) x.query
         , parser = do
             scheme ← parser schemeGrammar
-            P.single ':'
+            P.single $ char ':'
             hierPart ← parser grammar
-            query ← P.optional $ P.single '?' *> parser queryGrammar
+            query ← P.optional $ P.single (char '?') *> parser queryGrammar
             pure AbsoluteUri {scheme, hierPart, query}
         , generator = do
             scheme ← schemeGrammar.generator
@@ -208,8 +210,8 @@ instance HasGrammar AbsoluteUri where
 
 data RelativeRef = RelativeRef
   { relativePart ∷ RelativePart
-  , query ∷ Maybe Text
-  , fragment ∷ Maybe Text
+  , query ∷ Maybe ByteString
+  , fragment ∷ Maybe ByteString
   }
   deriving stock Generic
   deriving Arbitrary via TheGrammar RelativeRef
@@ -225,8 +227,8 @@ instance HasGrammar RelativeRef where
               <> foldMap (\f → "#" <> render fragmentGrammar f) x.fragment
         , parser = do
             relativePart ← parser grammar
-            query ← P.optional $ P.single '?' *> parser queryGrammar
-            fragment ← P.optional $ P.single '#' *> parser fragmentGrammar
+            query ← P.optional $ P.single (char '?') *> parser queryGrammar
+            fragment ← P.optional $ P.single (char '#') *> parser fragmentGrammar
             pure RelativeRef {relativePart, query, fragment}
         , generator = do
             relativePart ← generator grammar
@@ -236,9 +238,9 @@ instance HasGrammar RelativeRef where
         }
 
 data RelativePart
-  = RelativePart_Authority Authority (Seq Text)
-  | RelativePart_Absolute (Seq Text)
-  | RelativePart_Noscheme (NESeq Text)
+  = RelativePart_Authority Authority (Seq ByteString)
+  | RelativePart_Absolute (Seq ByteString)
+  | RelativePart_Noscheme (NESeq ByteString)
   | RelativePart_Empty
   deriving stock Generic
   deriving Arbitrary via TheGrammar RelativePart
@@ -269,7 +271,7 @@ instance HasGrammar RelativePart where
               ]
         }
 
-schemeGrammar ∷ Grammar Text
+schemeGrammar ∷ Grammar ByteString
 schemeGrammar =
   label "scheme" $
     textGrammar
@@ -283,24 +285,25 @@ schemeGrammar =
               ]
           pure ()
       )
-      ( fmap TB.fromString $
+      ( fmap fold $
           (:)
-            <$> generator alphaGrammar
+            <$> (BSB.word8 <$> generator alphaGrammar)
             <*> QC.listOf
-              ( QC.oneof
-                  [ generator alphaGrammar
-                  , generator digitGrammar
-                  , generator etc
-                  ]
+              ( BSB.word8
+                  <$> QC.oneof
+                    [ generator alphaGrammar
+                    , generator digitGrammar
+                    , generator etc
+                    ]
               )
       )
  where
-  etc = tokenEnumeration "+-."
+  etc = tokenEnumeration $ char <$> "+-."
 
 data Authority = Authority
-  { userinfo ∷ Maybe Text
+  { userinfo ∷ Maybe ByteString
   , host ∷ Host
-  , port ∷ Maybe Text
+  , port ∷ Maybe ByteString
   }
   deriving Arbitrary via TheGrammar Authority
 
@@ -314,9 +317,9 @@ instance HasGrammar Authority where
               <> render grammar x.host
               <> foldMap (\p → ":" <> render portGrammar p) x.port
         , parser = P.label "authority" do
-            userinfo ← P.optional $ P.try $ parser userinfoGrammar <* P.single '@'
+            userinfo ← P.optional $ P.try $ parser userinfoGrammar <* P.single (char '@')
             host ← parser grammar
-            port ← P.optional $ P.single ':' *> parser portGrammar
+            port ← P.optional $ P.single (char ':') *> parser portGrammar
             pure Authority {userinfo, host, port}
         , generator = do
             userinfo ← liftArbitrary $ generator userinfoGrammar
@@ -325,7 +328,7 @@ instance HasGrammar Authority where
             pure Authority {userinfo, host, port}
         }
 
-userinfoGrammar ∷ Grammar Text
+userinfoGrammar ∷ Grammar ByteString
 userinfoGrammar =
   label "userinfo" $
     textGrammar
@@ -335,7 +338,7 @@ userinfoGrammar =
               [ void $ unreservedGrammar.parser
               , void $ pctEncodedGrammar.parser
               , void $ subDelimGrammar.parser
-              , void $ P.single ':'
+              , void $ P.single $ char ':'
               ]
           pure ()
       )
@@ -351,8 +354,8 @@ userinfoGrammar =
 
 data Host
   = Host_IpLiteral IpLiteral
-  | Host_Ipv4 Text
-  | Host_RegName Text
+  | Host_Ipv4 ByteString
+  | Host_RegName ByteString
   deriving Arbitrary via TheGrammar Host
 
 instance HasGrammar Host where
@@ -378,16 +381,16 @@ instance HasGrammar Host where
               ]
         }
 
-portGrammar ∷ Grammar Text
+portGrammar ∷ Grammar ByteString
 portGrammar =
   label "port" $
     textGrammar
       (void $ P.many $ parser digitGrammar)
-      (fmap TB.fromString $ QC.listOf $ generator digitGrammar)
+      (fmap fold $ QC.listOf $ BSB.word8 <$> generator digitGrammar)
 
 data IpLiteral
-  = IpLiteral_V6 Text
-  | IpLiteral_Future Text
+  = IpLiteral_V6 ByteString
+  | IpLiteral_Future ByteString
   deriving stock Generic
   deriving Arbitrary via TheGrammar IpLiteral
 
@@ -404,12 +407,12 @@ instance HasGrammar IpLiteral where
                  )
               <> "]"
         , parser =
-            P.single '['
+            P.single (char '[')
               *> asum @[]
                 [ IpLiteral_V6 <$> parser ipv6AddressGrammar
                 , IpLiteral_Future <$> parser ipvFutureGrammar
                 ]
-              <* P.single ']'
+              <* P.single (char ']')
         , generator =
             QC.oneof
               [ IpLiteral_V6 <$> generator ipv6AddressGrammar
@@ -417,42 +420,47 @@ instance HasGrammar IpLiteral where
               ]
         }
 
-ipvFutureGrammar ∷ Grammar Text
+ipvFutureGrammar ∷ Grammar ByteString
 ipvFutureGrammar =
   label "IPvFuture" $
     textGrammar
       ( do
-          P.single 'v'
+          P.single $ char 'v'
           hexdigGrammar.parser
-          P.single '.'
+          P.single $ char '.'
           P.many $
             asum @[]
               [ void $ unreservedGrammar.parser
               , void $ subDelimGrammar.parser
-              , void $ P.single ':'
+              , void $ P.single $ char ':'
               ]
           pure ()
       )
       ( do
-          x ← generator hexdigGrammar
+          x ← BSB.word8 <$> generator hexdigGrammar
           xs ←
-            QC.listOf1 $
-              QC.oneof
-                [ generator unreservedGrammar
-                , generator subDelimGrammar
-                , pure ':'
-                ]
-          pure $ TB.fromString $ ['v', x, '.'] <> xs
+            fmap fold $
+              QC.listOf1 $
+                BSB.word8
+                  <$> QC.oneof
+                    [ generator unreservedGrammar
+                    , generator subDelimGrammar
+                    , pure $ char ':'
+                    ]
+          pure $ "v" <> x <> "." <> xs
       )
 
 -- | Parsing is much more lenient than the spec out of laziness, could be improved
-ipv6AddressGrammar ∷ Grammar Text
+ipv6AddressGrammar ∷ Grammar ByteString
 ipv6AddressGrammar =
   label "IPv6address" $
     textGrammar
       ( void $
           some $
-            asum @[] [void hexdigGrammar.parser, void $ P.single ':']
+            asum @[]
+              [ void hexdigGrammar.parser
+              , void $ P.single $ char ':'
+              ]
       )
       ( QC.oneof
           [ rep' 6 (h16 ^ pure ":") ^ ls32
@@ -473,35 +481,31 @@ ipv6AddressGrammar =
   rep' a = rep a a
   (^) = liftA2 (<>)
   opt g = QC.oneof [pure "", g]
-  h16, ls32 ∷ Gen TB.Builder
+  h16, ls32 ∷ Gen Builder
   h16 = do
     n ← QC.choose (1, 4)
-    fmap TB.fromString $ QC.vectorOf n hexdigGrammar.generator
+    fmap fold $ QC.vectorOf n $ BSB.word8 <$> hexdigGrammar.generator
   ls32 =
     QC.oneof
       [ h16 ^ pure ":" ^ h16
       , renderGenerator ipv4AddressGrammar
       ]
 
-ipv4AddressGrammar ∷ Grammar Text
+ipv4AddressGrammar ∷ Grammar ByteString
 ipv4AddressGrammar =
   label "IPv4address" $
     textGrammar
       ( do
-          decOctetGrammar.parser
-          P.single '.'
-          decOctetGrammar.parser
-          P.single '.'
-          decOctetGrammar.parser
-          P.single '.'
-          decOctetGrammar.parser
+          let o = decOctetGrammar.parser
+              d = P.single $ char '.'
+          o *> d *> o *> d *> o *> d *> o
           pure ()
       )
       ( fmap (fold . List.intersperse ".") $
           replicateM 4 (renderGenerator decOctetGrammar)
       )
 
-regNameGrammar ∷ Grammar Text
+regNameGrammar ∷ Grammar ByteString
 regNameGrammar =
   label "reg-name" $
     textGrammar
@@ -522,17 +526,17 @@ regNameGrammar =
               ]
       )
 
-pathAbemptyGrammar ∷ Grammar (Seq Text)
+pathAbemptyGrammar ∷ Grammar (Seq ByteString)
 pathAbemptyGrammar =
   label
     "path-abempty"
     Grammar
       { render = foldMap (\s → "/" <> segmentGrammar.render s)
-      , parser = fmap Seq.fromList $ many $ P.single '/' *> segmentGrammar.parser
+      , parser = fmap Seq.fromList $ many $ P.single (char '/') *> segmentGrammar.parser
       , generator = fmap Seq.fromList $ QC.listOf segmentGrammar.generator
       }
 
-pathAbsoluteGrammar ∷ Grammar (Seq Text)
+pathAbsoluteGrammar ∷ Grammar (Seq ByteString)
 pathAbsoluteGrammar =
   label
     "path-absolute"
@@ -544,9 +548,9 @@ pathAbsoluteGrammar =
               segmentNzGrammar.render x
                 <> foldMap (\s → "/" <> segmentGrammar.render s) xs
       , parser = do
-          P.single '/'
+          P.single $ char '/'
           x ← segmentNzGrammar.parser
-          xs ← fmap Seq.fromList $ many $ P.single '/' *> segmentGrammar.parser
+          xs ← fmap Seq.fromList $ many $ P.single (char '/') *> segmentGrammar.parser
           pure $ x :<| xs
       , generator = QC.sized \size → do
           n ← QC.choose (0, size)
@@ -558,7 +562,7 @@ pathAbsoluteGrammar =
                 <*> fmap Seq.fromList (QC.vectorOf (n - 1) segmentGrammar.generator)
       }
 
-pathNoschemeGrammar ∷ Grammar (NESeq Text)
+pathNoschemeGrammar ∷ Grammar (NESeq ByteString)
 pathNoschemeGrammar =
   label
     "path-noscheme"
@@ -568,7 +572,7 @@ pathNoschemeGrammar =
             <> foldMap (\s → "/" <> render segmentGrammar s) xs
       , parser = do
           x ← parser segmentNzNcGrammar
-          xs ← fmap Seq.fromList $ P.many $ P.single '/' *> parser segmentGrammar
+          xs ← fmap Seq.fromList $ P.many $ P.single (char '/') *> parser segmentGrammar
           pure $ x :<|| xs
       , generator = do
           x ← generator segmentNzNcGrammar
@@ -576,7 +580,7 @@ pathNoschemeGrammar =
           pure $ x :<|| xs
       }
 
-pathRootlessGrammar ∷ Grammar (NESeq Text)
+pathRootlessGrammar ∷ Grammar (NESeq ByteString)
 pathRootlessGrammar =
   label
     "path-rootless"
@@ -586,7 +590,7 @@ pathRootlessGrammar =
             <> foldMap (\s → "/" <> render segmentGrammar s) xs
       , parser = do
           x ← parser segmentNzGrammar
-          xs ← fmap Seq.fromList $ P.many $ P.single '/' *> parser segmentGrammar
+          xs ← fmap Seq.fromList $ P.many $ P.single (char '/') *> parser segmentGrammar
           pure $ x :<|| xs
       , generator = do
           x ← generator segmentNzGrammar
@@ -602,21 +606,21 @@ pathEmptyGrammar =
     , generator = pure ()
     }
 
-segmentGrammar ∷ Grammar Text
+segmentGrammar ∷ Grammar ByteString
 segmentGrammar =
   label "segment" $
     textGrammar
       (void $ P.many $ parser pcharGrammar)
       (fmap fold $ QC.listOf $ renderGenerator pcharGrammar)
 
-segmentNzGrammar ∷ Grammar Text
+segmentNzGrammar ∷ Grammar ByteString
 segmentNzGrammar =
   label "segment-nz" $
     textGrammar
       (void $ P.some $ parser pcharGrammar)
       (fmap fold $ QC.listOf1 $ renderGenerator pcharGrammar)
 
-segmentNzNcGrammar ∷ Grammar Text
+segmentNzNcGrammar ∷ Grammar ByteString
 segmentNzNcGrammar =
   label "segment-nz-nc" $
     textGrammar
@@ -639,7 +643,7 @@ segmentNzNcGrammar =
           , renderGenerator etc
           ]
       )
-  etc = tokenEnumeration ":"
+  etc = tokenEnumeration $ char <$> ":"
 
 pctEncodedGrammar ∷ Grammar Word8
 pctEncodedGrammar =
@@ -647,23 +651,23 @@ pctEncodedGrammar =
     "pct-encoded"
     Grammar
       { render = \x →
-          TB.singleton '%'
+          BSB.word8 (char '%')
             <> render (hexdigNumGrammar UpperCase) (x `shiftR` 4)
             <> render (hexdigNumGrammar UpperCase) (x .&. 15)
       , parser = do
-          P.single '%'
+          P.single $ char '%'
           a ← parser $ hexdigNumGrammar UpperCase
           b ← parser $ hexdigNumGrammar UpperCase
           pure $ (a `shiftL` 4) + b
       , generator = arbitrary
       }
 
-unreservedGrammar ∷ Grammar Char
+unreservedGrammar ∷ Grammar Word8
 unreservedGrammar =
   label
     "unreserved"
     Grammar
-      { render = TB.singleton
+      { render = BSB.word8
       , parser =
           asum @[]
             [ parser alphaGrammar
@@ -678,29 +682,29 @@ unreservedGrammar =
             ]
       }
  where
-  etc = tokenEnumeration "-._~"
+  etc = tokenEnumeration $ char <$> "-._~"
 
-reservedGrammar ∷ Grammar Char
+reservedGrammar ∷ Grammar Word8
 reservedGrammar = label "reserved" $ tokenEnumeration $ genDelims <> subDelims
 
-genDelimGrammar ∷ Grammar Char
+genDelimGrammar ∷ Grammar Word8
 genDelimGrammar = label "gen-delims" $ tokenEnumeration genDelims
 
-genDelims ∷ [Char]
-genDelims = ":/?#[]@"
+genDelims ∷ [Word8]
+genDelims = char <$> ":/?#[]@"
 
-subDelimGrammar ∷ Grammar Char
+subDelimGrammar ∷ Grammar Word8
 subDelimGrammar = label "sub-delims" $ tokenEnumeration subDelims
 
-subDelims ∷ [Char]
-subDelims = "!$&'()*+,;="
+subDelims ∷ [Word8]
+subDelims = char <$> "!$&'()*+,;="
 
 decOctetGrammar ∷ Grammar Word8
 decOctetGrammar =
   label
     "dec-octet"
     Grammar
-      { render = TB.decimal
+      { render = BSB.word8Dec
       , parser = do
           xs ← some digitNumGrammar.parser
           let n ∷ Natural = foldl' (\t x → (t * 10) + fromIntegral x) 0 xs
@@ -708,13 +712,13 @@ decOctetGrammar =
       , generator = arbitrary
       }
 
-queryGrammar ∷ Grammar Text
+queryGrammar ∷ Grammar ByteString
 queryGrammar = label "query" queryOrFragmentGrammar
 
-fragmentGrammar ∷ Grammar Text
+fragmentGrammar ∷ Grammar ByteString
 fragmentGrammar = label "fragment" queryOrFragmentGrammar
 
-queryOrFragmentGrammar ∷ Grammar Text
+queryOrFragmentGrammar ∷ Grammar ByteString
 queryOrFragmentGrammar =
   textGrammar
     ( void $
@@ -732,9 +736,9 @@ queryOrFragmentGrammar =
             ]
     )
  where
-  etc = tokenEnumeration "/?"
+  etc = tokenEnumeration $ char <$> "/?"
 
-pcharGrammar ∷ Grammar Text
+pcharGrammar ∷ Grammar ByteString
 pcharGrammar =
   label "pchar" $
     textGrammar
@@ -753,4 +757,4 @@ pcharGrammar =
           ]
       )
  where
-  etc = tokenEnumeration ":@"
+  etc = tokenEnumeration $ char <$> ":@"

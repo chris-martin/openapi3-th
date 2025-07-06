@@ -10,6 +10,9 @@ import Data.Bifunctor (first)
 import Data.Bool (not, (&&), (||))
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
+import Data.ByteString.Builder (Builder)
+import Data.ByteString.Builder qualified as BSB
+import Data.ByteString.Lazy qualified as BSL
 import Data.Char (Char)
 import Data.Char qualified as Char
 import Data.Coerce
@@ -39,14 +42,14 @@ import Test.QuickCheck qualified as QC
 import Test.QuickCheck.Arbitrary.Generic
 import Text.Megaparsec (Parsec)
 import Text.Megaparsec qualified as P
-import Text.Megaparsec.Char.Lexer qualified as P
+import Text.Megaparsec.Byte.Lexer qualified as P
 import Text.Show (show)
 import Prelude (String, fromIntegral)
 
 data Grammar a
   = Grammar
-  { parser ∷ Parsec Void Text a
-  , render ∷ a → TB.Builder
+  { parser ∷ Parsec Void ByteString a
+  , render ∷ a → Builder
   , generator ∷ Gen a
   }
 
@@ -58,41 +61,41 @@ newtype TheGrammar a = TheGrammar a
 instance HasGrammar a ⇒ Arbitrary (TheGrammar a) where
   arbitrary = TheGrammar <$> grammar.generator
 
-render ∷ Grammar a → a → TB.Builder
+render ∷ Grammar a → a → Builder
 render = (.render)
 
-parser ∷ Grammar a → Parsec Void Text a
+parser ∷ Grammar a → Parsec Void ByteString a
 parser = (.parser)
 
 generator ∷ Grammar a → Gen a
 generator = (.generator)
 
-renderGenerator ∷ Grammar a → Gen TB.Builder
+renderGenerator ∷ Grammar a → Gen Builder
 renderGenerator g = g.render <$> g.generator
 
 label ∷ String → Grammar a → Grammar a
 label l g = g {parser = P.label l g.parser}
 
-tokenEnumeration ∷ [Char] → Grammar Char
+tokenEnumeration ∷ [Word8] → Grammar Word8
 tokenEnumeration xs =
   Grammar
     { parser = P.satisfy (`List.elem` xs)
-    , render = TB.singleton
+    , render = BSB.word8
     , generator = QC.elements xs
     }
 
-tokenPredicate ∷ (Char → Bool) → Gen Char → Grammar Char
+tokenPredicate ∷ (Word8 → Bool) → Gen Word8 → Grammar Word8
 tokenPredicate f generator =
   Grammar
     { parser = P.satisfy f
-    , render = TB.singleton
+    , render = BSB.word8
     , generator
     }
 
-textGrammar ∷ Parsec Void Text () → Gen TB.Builder → Grammar Text
+textGrammar ∷ Parsec Void ByteString () → Gen Builder → Grammar ByteString
 textGrammar p g =
   Grammar
     { parser = fmap fst $ P.match p
-    , generator = fmap (TL.toStrict . TB.toLazyText) g
-    , render = TB.fromText
+    , generator = fmap (BSL.toStrict . BSB.toLazyByteString) g
+    , render = BSB.byteString
     }

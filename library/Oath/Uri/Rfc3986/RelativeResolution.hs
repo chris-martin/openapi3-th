@@ -11,6 +11,8 @@ module Oath.Uri.Rfc3986.RelativeResolution (
 import Essentials
 
 import Control.Applicative ((<|>))
+import Data.ByteString (ByteString)
+import Data.Either (Either (..))
 import Data.Foldable (toList)
 import Data.Sequence (Seq (..))
 import Data.Sequence.NonEmpty (NESeq)
@@ -19,13 +21,12 @@ import Data.Text (Text)
 
 import Oath.Uri.Rfc3986.Grammar (AbsoluteUri (..), Authority (..))
 import Oath.Uri.Rfc3986.Grammar qualified as G
-import Data.Either (Either (..))
 
 data BaseUri = BaseUri
-  { scheme ∷ Text
+  { scheme ∷ ByteString
   , authority ∷ Maybe Authority
   , path ∷ Path
-  , query ∷ Maybe Text
+  , query ∷ Maybe ByteString
   }
 
 baseUriFromGrammar ∷ AbsoluteUri → BaseUri
@@ -35,11 +36,11 @@ baseUriFromGrammar x@AbsoluteUri {scheme, query} =
   (authority, path) = fromHierPart x.hierPart
 
 data UriReference = UriReference
-  { scheme ∷ Maybe Text
+  { scheme ∷ Maybe ByteString
   , authority ∷ Maybe Authority
   , path ∷ Path
-  , query ∷ Maybe Text
-  , fragment ∷ Maybe Text
+  , query ∷ Maybe ByteString
+  , fragment ∷ Maybe ByteString
   }
 
 uriReferenceFromGrammar ∷ G.UriReference → UriReference
@@ -57,28 +58,29 @@ uriReferenceFromGrammar = \case
 
 data PathRoot = PathRelative | PathAbsolute
 
-data Path = Path {root ∷ PathRoot, segments ∷ Seq Text}
+data Path = Path {root ∷ PathRoot, segments ∷ Seq ByteString}
 
 data Uri = Uri
-  { scheme ∷ Text
+  { scheme ∷ ByteString
   , authority ∷ Maybe Authority
   , path ∷ Path
-  , query ∷ Maybe Text
-  , fragment ∷ Maybe Text
+  , query ∷ Maybe ByteString
+  , fragment ∷ Maybe ByteString
   }
 
 uriToGrammar ∷ Uri → Either InvalidHierPart G.Uri
 uriToGrammar x@Uri {scheme, query, fragment} = do
-  hierPart <- toHierPart (x.authority, x.path)
+  hierPart ← toHierPart (x.authority, x.path)
   pure G.Uri {scheme, hierPart, query, fragment}
 
-toHierPart ∷ (Maybe Authority, Path)
- → Either InvalidHierPart G.HierPart
+toHierPart
+  ∷ (Maybe Authority, Path)
+  → Either InvalidHierPart G.HierPart
 toHierPart = \case
-  (Just a,Path PathAbsolute p) -> pure $ G.HierPart_Authority a p
-  (Just{},Path PathRelative _) -> Left AuthorityWithRelativePath
-  (Nothing, Path PathAbsolute p) -> _
-  (Nothing, Path PathRelative p) -> _
+  (Just a, Path PathAbsolute p) → pure $ G.HierPart_Authority a p
+  (Just {}, Path PathRelative _) → Left AuthorityWithRelativePath
+  (Nothing, Path PathAbsolute p) → _
+  (Nothing, Path PathRelative p) → _
 
 data InvalidHierPart = AuthorityWithRelativePath
 
