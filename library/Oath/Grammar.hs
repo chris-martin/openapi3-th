@@ -3,7 +3,7 @@ module Oath.Grammar where
 import Essentials
 
 import Control.Applicative (Alternative (..), asum, liftA2)
-import Control.Monad (mfilter, replicateM, replicateM_, unless)
+import Control.Monad (mfilter, replicateM, replicateM_, sequence, unless)
 import Control.Monad.Fail
 import Control.Monad.Validate
 import Data.Bifunctor (first)
@@ -17,8 +17,11 @@ import Data.Char (Char)
 import Data.Char qualified as Char
 import Data.Coerce
 import Data.Either (Either (..), either)
+import Data.Foldable (fold, toList)
 import Data.Function (const)
 import Data.List qualified as List
+import Data.List.NonEmpty (NonEmpty ((:|)), nonEmpty)
+import Data.Maybe (mapMaybe)
 import Data.Proxy
 import Data.Sequence (Seq (..))
 import Data.Sequence qualified as Seq
@@ -49,9 +52,38 @@ import Prelude (String, fromIntegral)
 data Grammar a
   = Grammar
   { parser ∷ Parsec Void ByteString a
-  , render ∷ a → Builder
   , generator ∷ Gen a
+  , render ∷ a → Maybe Render
   }
+
+data Render = Render
+  { canonical ∷ Builder
+  , generator ∷ Gen Builder
+  }
+
+renderConst ∷ Builder → Render
+renderConst canonical =
+  Render {canonical, generator = pure canonical}
+
+renderChoices ∷ [a → Maybe Render] → a → Maybe Render
+renderChoices xs x = do
+  os@(o :| _) ← nonEmpty $ mapMaybe ($ x) xs
+  pure
+    Render
+      { canonical = o.canonical
+      , generator = QC.oneof $ fmap (.generator) $ toList os
+      }
+
+renderConcat ∷ [Maybe Render] → Maybe Render
+renderConcat =
+  fmap
+    ( \xs →
+        Render
+          { canonical = fold $ fmap (.canonical) xs
+          , generator = fmap fold $ sequence $ fmap (.generator) xs
+          }
+    )
+    . sequence
 
 class HasGrammar a where
   grammar ∷ Grammar a
@@ -61,7 +93,7 @@ newtype TheGrammar a = TheGrammar a
 instance HasGrammar a ⇒ Arbitrary (TheGrammar a) where
   arbitrary = TheGrammar <$> grammar.generator
 
-render ∷ Grammar a → a → Builder
+render ∷ Grammar a → a → Maybe Render
 render = (.render)
 
 parser ∷ Grammar a → Parsec Void ByteString a
@@ -70,9 +102,6 @@ parser = (.parser)
 generator ∷ Grammar a → Gen a
 generator = (.generator)
 
-renderGenerator ∷ Grammar a → Gen Builder
-renderGenerator g = g.render <$> g.generator
-
 label ∷ String → Grammar a → Grammar a
 label l g = g {parser = P.label l g.parser}
 
@@ -80,22 +109,22 @@ tokenEnumeration ∷ [Word8] → Grammar Word8
 tokenEnumeration xs =
   Grammar
     { parser = P.satisfy (`List.elem` xs)
-    , render = BSB.word8
     , generator = QC.elements xs
+    , render = renderSimple BSB.word8
     }
+ where
+  r = BSB.word8
 
 tokenPredicate ∷ (Word8 → Bool) → Gen Word8 → Grammar Word8
 tokenPredicate f generator =
   Grammar
     { parser = P.satisfy f
-    , render = BSB.word8
     , generator
+    , render = renderSimple BSB.word8
     }
 
-textGrammar ∷ Parsec Void ByteString () → Gen Builder → Grammar ByteString
-textGrammar p g =
-  Grammar
-    { parser = fmap fst $ P.match p
-    , generator = fmap (BSL.toStrict . BSB.toLazyByteString) g
-    , render = BSB.byteString
-    }
+renderSimple ∷ (a → Builder) → a → Maybe Render
+renderSimple r x = Just $ renderConst $ r x
+
+build ∷ Builder → BS.StrictByteString
+build = BSL.toStrict . BSB.toLazyByteString

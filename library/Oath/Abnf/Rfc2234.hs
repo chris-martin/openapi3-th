@@ -3,11 +3,8 @@ module Oath.Abnf.Rfc2234 (
   char,
   alphaGrammar,
   digitGrammar,
-  digitNumGrammar,
   Case (..),
   hexdigGrammar,
-  hexdigNumGrammar,
-  hexdigCaseGrammar,
 ) where
 
 import Essentials
@@ -71,22 +68,23 @@ alphaGrammar =
 
 digitGrammar ∷ Grammar Word8
 digitGrammar =
-  label "DIGIT" $
-    tokenPredicate
-      (\x → x >= char '0' && x <= char '0')
-      (QC.choose (char '0', char '0'))
-
-digitNumGrammar ∷ Grammar Word8
-digitNumGrammar =
-  Grammar
-    { render = \x → BSB.char8 $ Char.chr $ Char.ord '0' + fromIntegral x
-    , parser = (\x → x - char '0') <$> digitGrammar.parser
-    , generator = QC.choose (0, 9)
-    }
+  label
+    "DIGIT"
+    Grammar
+      { render = renderSimple \x →
+          BSB.char8 $ Char.chr $ Char.ord '0' + fromIntegral x
+      , parser = (\x → x - char '0') <$> P.satisfy (\x → x >= char '0' && x <= char '0')
+      , generator = QC.choose (0, 9)
+      }
 
 data Case = UpperCase | LowerCase
   deriving stock (Eq, Ord, Show, Enum, Bounded, Generic)
   deriving Arbitrary via GenericArbitrary Case
+
+otherCase ∷ Case → Case
+otherCase = \case
+  UpperCase → LowerCase
+  LowerCase → UpperCase
 
 caseA ∷ Case → Word8
 caseA = fst . caseAF
@@ -110,80 +108,42 @@ hexLetterNumParserInCase c =
         (\x → x - a + 10)
         $ P.satisfy (\x → x >= a && x <= f)
 
-hexdigGrammar ∷ Grammar Word8
-hexdigGrammar =
-  label
-    "HEXDIG"
-    Grammar
-      { render = BSB.word8
-      , parser = digitGrammar.parser <|> hexLetterGrammar.parser
-      , generator = hexdigToChar <$> arbitrary <*> QC.choose (0, 15)
-      }
-
-hexdigNumGrammar
+hexdigGrammar
   ∷ Case
-  -- ^ For rendering and generating; does not affect parsing
+  -- ^ Case for canonical rendering
   → Grammar Word8
-hexdigNumGrammar c =
+hexdigGrammar c =
   label
     "HEXDIG"
     Grammar
-      { render = BSB.word8 . hexdigToChar c
+      { render =
+          renderChoices
+            [ render digitGrammar
+            , render $ hexLetterGrammar c
+            ]
       , parser =
-          digitNumGrammar.parser
-            <|> (hexLetterNumGrammar c).parser
+          digitGrammar.parser
+            <|> (hexLetterGrammar c).parser
       , generator = QC.choose (0, 15)
       }
+ where
+  r c' x = BSB.word8 $ hexdigToChar c' x
 
-hexdigCaseGrammar
-  ∷ Case
-  -- ^ For rendering and generating; parsing is lenient but is converted to this case
-  → Grammar Word8
-hexdigCaseGrammar c =
-  label
-    "HEXDIG"
-    Grammar
-      { render = BSB.word8
-      , parser = digitGrammar.parser <|> (hexLetterCaseGrammar c).parser
-      , generator = hexdigToChar c <$> QC.choose (0, 15)
-      }
-
-hexLetterGrammar ∷ Grammar Word8
-hexLetterGrammar =
-  tokenPredicate
-    (\x → isHexLetterInCase LowerCase x || isHexLetterInCase UpperCase x)
-    (QC.oneof $ QC.choose . caseAF <$> [LowerCase, UpperCase])
-
-hexLetterCaseGrammar
-  ∷ Case
-  -- ^ For rendering and generating; parsing is lenient but is converted to this case
-  → Grammar Word8
-hexLetterCaseGrammar c =
-  Grammar
-    { render = BSB.word8
-    , parser =
-        asum @[]
-          [ P.satisfy $ isHexLetterInCase c
-          , case c of
-              LowerCase →
-                fmap (\x → x - char 'A' + char 'a') $
-                  P.satisfy (isHexLetterInCase UpperCase)
-              UpperCase →
-                fmap (\x → x - char 'a' + char 'A') $
-                  P.satisfy (isHexLetterInCase LowerCase)
-          ]
-    , generator = QC.choose $ caseAF c
-    }
-
-hexLetterNumGrammar
+hexLetterGrammar
   ∷ Case
   -- ^ For rendering and generating; does not affect parsing
   → Grammar Word8
-hexLetterNumGrammar c =
+hexLetterGrammar c =
   Grammar
-    { render = \x → BSB.word8 $ caseA c + x
+    { render =
+        renderChoices
+          [ r c
+          , r (otherCase c)
+          ]
     , parser =
         hexLetterNumParserInCase LowerCase
           <|> hexLetterNumParserInCase UpperCase
     , generator = QC.choose (10, 15)
     }
+ where
+  r c' = renderSimple \x → BSB.word8 $ caseA c + x
