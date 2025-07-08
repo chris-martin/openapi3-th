@@ -89,6 +89,7 @@ import Oath.Grammar
 import Oath.Uri.Rfc3986.Characters
 import Oath.Uri.Rfc3986.Host
 import Oath.Uri.Rfc3986.Scheme
+import Oath.Uri.Rfc3986.Segment
 
 data Uri = Uri
   { scheme ∷ ByteString
@@ -436,50 +437,6 @@ pathEmptyGrammar =
     }
  where
   r = const mempty
-
-segmentGrammar ∷ Grammar ByteString
-segmentGrammar =
-  label
-    "segment"
-    Grammar
-      { render = BSB.byteString
-      , parser =
-          fmap (build . fold) $ P.many $ parser pcharGrammar
-      , generator =
-          fmap (build . fold) $ QC.listOf $ renderGenerator pcharGrammar
-      }
-
-segmentNzGrammar ∷ Grammar ByteString
-segmentNzGrammar =
-  label "segment-nz" $
-    textGrammar
-      (void $ P.some $ parser pcharGrammar)
-      (fmap fold $ QC.listOf1 $ renderGenerator pcharGrammar)
-
-segmentNzNcGrammar ∷ Grammar ByteString
-segmentNzNcGrammar =
-  label "segment-nz-nc" $
-    textGrammar
-      (void $ P.some $ parser segmentNcCharGrammar)
-      (fmap fold $ QC.listOf1 $ renderGenerator segmentNcCharGrammar)
- where
-  segmentNcCharGrammar =
-    textGrammar
-      ( asum @[]
-          [ void unreservedGrammar.parser
-          , void pctEncodedGrammar.parser
-          , void subDelimGrammar.parser
-          , void etc.parser
-          ]
-      )
-      ( QC.oneof
-          [ renderGenerator unreservedGrammar
-          , renderGenerator pctEncodedGrammar
-          , renderGenerator subDelimGrammar
-          , renderGenerator etc
-          ]
-      )
-  etc = tokenEnumeration $ char <$> ":"
 
 queryGrammar ∷ Grammar ByteString
 queryGrammar = label "query" queryOrFragmentGrammar
