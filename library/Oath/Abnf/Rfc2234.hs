@@ -10,7 +10,7 @@ module Oath.Abnf.Rfc2234 (
 import Essentials
 
 import Control.Applicative (Alternative (..), asum, liftA2)
-import Control.Monad (mfilter, replicateM, replicateM_, unless)
+import Control.Monad (guard, mfilter, replicateM, replicateM_, unless)
 import Control.Monad.Fail
 import Control.Monad.Validate
 import Data.Bifunctor (first)
@@ -71,8 +71,9 @@ digitGrammar =
   label
     "DIGIT"
     Grammar
-      { render = renderSimple \x →
-          BSB.char8 $ Char.chr $ Char.ord '0' + fromIntegral x
+      { render = \x → do
+          guard $ x <= 9
+          Just $ renderConst $ BSB.char8 $ Char.chr $ Char.ord '0' + fromIntegral x
       , parser = (\x → x - char '0') <$> P.satisfy (\x → x >= char '0' && x <= char '0')
       , generator = QC.choose (0, 9)
       }
@@ -126,8 +127,6 @@ hexdigGrammar c =
             <|> (hexLetterGrammar c).parser
       , generator = QC.choose (0, 15)
       }
- where
-  r c' x = BSB.word8 $ hexdigToChar c' x
 
 hexLetterGrammar
   ∷ Case
@@ -146,4 +145,7 @@ hexLetterGrammar c =
     , generator = QC.choose (10, 15)
     }
  where
-  r c' = renderSimple \x → BSB.word8 $ caseA c + x
+  r c' x = do
+    guard $ x >= 10
+    guard $ x <= 15
+    Just $ renderConst $ BSB.word8 $ caseA c + x

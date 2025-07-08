@@ -100,7 +100,14 @@ instance HasGrammar Uri where
     label
       "URI"
       Grammar
-        { render = r
+        { render =
+            renderChoices
+              [ render schemeGrammar x.scheme
+              , ":"
+              , render grammar x.hierPart
+              , foldMap (\q → "?" <> render queryGrammar q) x.query
+              , foldMap (\f → "#" <> render fragmentGrammar f) x.fragment
+              ]
         , parser = do
             scheme ← parser schemeGrammar
             P.single $ char ':'
@@ -114,26 +121,7 @@ instance HasGrammar Uri where
             query ← liftArbitrary queryGrammar.generator
             fragment ← liftArbitrary fragmentGrammar.generator
             pure Uri {scheme, hierPart, query, fragment}
-        , renderGenerator = rg
         }
-   where
-    r x =
-      fold @[]
-        [ render schemeGrammar x.scheme
-        , ":"
-        , render grammar x.hierPart
-        , foldMap (\q → "?" <> render queryGrammar q) x.query
-        , foldMap (\f → "#" <> render fragmentGrammar f) x.fragment
-        ]
-    rg x =
-      fmap fold $
-        sequence @[]
-          [ renderGenerator schemeGrammar x.scheme
-          , pure ":"
-          , renderGenerator grammar x.hierPart
-          , foldMap (\q → "?" <> renderGenerator queryGrammar q) x.query
-          , foldMap (\f → "#" <> renderGenerator fragmentGrammar f) x.fragment
-          ]
 
 data HierPart
   = HierPart_Authority Authority (Seq ByteString)
@@ -163,7 +151,6 @@ instance HasGrammar HierPart where
               , HierPart_Rootless <$> generator pathRootlessGrammar
               , HierPart_Empty <$ generator pathEmptyGrammar
               ]
-        , renderGenerator = pure . r
         }
    where
     r = \case
@@ -192,7 +179,6 @@ instance HasGrammar UriReference where
             [ UriReference_Uri <$> generator grammar
             , UriReference_RelativeRef <$> generator grammar
             ]
-      , renderGenerator = pure . r
       }
    where
     r = \case
@@ -223,7 +209,6 @@ instance HasGrammar AbsoluteUri where
             hierPart ← generator grammar
             query ← liftArbitrary $ generator queryGrammar
             pure AbsoluteUri {scheme, hierPart, query}
-        , renderGenerator = pure . r
         }
    where
     r x =
@@ -256,7 +241,6 @@ instance HasGrammar RelativeRef where
             query ← liftArbitrary $ generator queryGrammar
             fragment ← liftArbitrary $ generator fragmentGrammar
             pure RelativeRef {relativePart, query, fragment}
-        , renderGenerator = pure . r
         }
    where
     r x =
@@ -292,7 +276,6 @@ instance HasGrammar RelativePart where
               , RelativePart_Noscheme <$> generator pathNoschemeGrammar
               , RelativePart_Empty <$ generator pathEmptyGrammar
               ]
-        , renderGenerator = pure . r
         }
    where
     r = \case
@@ -326,7 +309,6 @@ schemeGrammar =
                     , generator etc
                     ]
                 )
-      , renderGenerator = pure . r
       }
  where
   etc = tokenEnumeration $ char <$> "+-."
@@ -355,7 +337,6 @@ instance HasGrammar Authority where
             host ← generator grammar
             port ← liftArbitrary $ generator portGrammar
             pure Authority {userinfo, host, port}
-        , renderGenerator = pure . r
         }
    where
     r x =
@@ -386,38 +367,7 @@ userinfoGrammar =
                 , renderGenerator subDelimGrammar
                 , pure ":"
                 ]
-      , renderGenerator = _
       }
-
-data Host
-  = Host_IpLiteral IpLiteral
-  | Host_Ipv4 ByteString
-  | Host_RegName ByteString
-  deriving Arbitrary via TheGrammar Host
-
-instance HasGrammar Host where
-  grammar =
-    label
-      "host"
-      Grammar
-        { render = \case
-            Host_IpLiteral x → render grammar x
-            Host_Ipv4 x → render ipv4AddressGrammar x
-            Host_RegName x → render regNameGrammar x
-        , parser =
-            asum @[]
-              [ Host_IpLiteral <$> parser grammar
-              , Host_Ipv4 <$> parser ipv4AddressGrammar
-              , Host_RegName <$> parser regNameGrammar
-              ]
-        , generator =
-            QC.oneof
-              [ Host_IpLiteral <$> generator grammar
-              , Host_Ipv4 <$> generator ipv4AddressGrammar
-              , Host_RegName <$> generator regNameGrammar
-              ]
-        , renderGenerator = _
-        }
 
 portGrammar ∷ Grammar ByteString
 portGrammar =
@@ -430,159 +380,6 @@ portGrammar =
           fmap (build . fold) $
             QC.listOf $
               BSB.word8 <$> generator digitGrammar
-      , renderGenerator = _
-      }
-
-data IpLiteral
-  = IpLiteral_V6 ByteString
-  | IpLiteral_Future ByteString
-  deriving stock Generic
-  deriving Arbitrary via TheGrammar IpLiteral
-
-instance HasGrammar IpLiteral where
-  grammar =
-    label
-      "IP-literal"
-      Grammar
-        { render = \x →
-            "["
-              <> ( case x of
-                    IpLiteral_V6 x → render ipv6AddressGrammar x
-                    IpLiteral_Future x → render ipvFutureGrammar x
-                 )
-              <> "]"
-        , parser =
-            P.single (char '[')
-              *> asum @[]
-                [ IpLiteral_V6 <$> parser ipv6AddressGrammar
-                , IpLiteral_Future <$> parser ipvFutureGrammar
-                ]
-              <* P.single (char ']')
-        , generator =
-            QC.oneof
-              [ IpLiteral_V6 <$> generator ipv6AddressGrammar
-              , IpLiteral_Future <$> generator ipvFutureGrammar
-              ]
-        , renderGenerator = _
-        }
-
-ipvFutureGrammar ∷ Grammar ByteString
-ipvFutureGrammar =
-  label
-    "IPvFuture"
-    Grammar
-      { render = BSB.byteString
-      , parser = fmap fst $ P.match do
-          P.single $ char 'v'
-          hexdigGrammar.parser
-          P.single $ char '.'
-          P.many $
-            asum @[]
-              [ void $ unreservedGrammar.parser
-              , void $ subDelimGrammar.parser
-              , void $ P.single $ char ':'
-              ]
-      , generator = fmap build do
-          x ← BSB.word8 <$> generator hexdigGrammar
-          xs ←
-            fmap fold $
-              QC.listOf1 $
-                BSB.word8
-                  <$> QC.oneof
-                    [ generator unreservedGrammar
-                    , generator subDelimGrammar
-                    , pure $ char ':'
-                    ]
-          pure $ "v" <> x <> "." <> xs
-      , renderGenerator = _
-      }
-
--- | Parsing is much more lenient than the spec out of laziness, could be improved
-ipv6AddressGrammar ∷ Grammar ByteString
-ipv6AddressGrammar =
-  label
-    "IPv6address"
-    Grammar
-      { render = BSB.byteString
-      , parser =
-          fmap fst $
-            P.match $
-              some $
-                asum @[]
-                  [ void hexdigGrammar.parser
-                  , void $ P.single $ char ':'
-                  ]
-      , generator =
-          fmap build $
-            QC.oneof
-              [ rep' 6 (h16 ^ pure ":") ^ ls32
-              , pure "::" ^ rep' 5 (h16 ^ pure ":") ^ ls32
-              , opt h16 ^ pure "::" ^ rep' 4 (h16 ^ pure ":") ^ ls32
-              , opt (rep 0 1 (h16 ^ pure ":") ^ h16) ^ pure "::" ^ rep' 3 (h16 ^ pure ":") ^ ls32
-              , opt (rep 0 2 (h16 ^ pure ":") ^ h16) ^ pure "::" ^ rep' 2 (h16 ^ pure ":") ^ ls32
-              , opt (rep 0 3 (h16 ^ pure ":") ^ h16) ^ pure "::" ^ h16 ^ pure ":" ^ ls32
-              , opt (rep 0 4 (h16 ^ pure ":") ^ h16) ^ pure "::" ^ ls32
-              , opt (rep 0 5 (h16 ^ pure ":") ^ h16) ^ pure "::" ^ h16
-              , opt (rep 0 6 (h16 ^ pure ":") ^ h16) ^ pure "::"
-              ]
-      , renderGenerator = _
-      }
- where
-  rep a b g = do
-    n ← QC.choose (a, b)
-    fmap fold $ QC.vectorOf n g
-  rep' a = rep a a
-  (^) = liftA2 (<>)
-  opt g = QC.oneof [pure "", g]
-  h16, ls32 ∷ Gen Builder
-  h16 = do
-    n ← QC.choose (1, 4)
-    fmap fold $ QC.vectorOf n $ BSB.word8 <$> hexdigGrammar.generator
-  ls32 =
-    QC.oneof
-      [ h16 ^ pure ":" ^ h16
-      , renderGenerator ipv4AddressGrammar
-      ]
-
-ipv4AddressGrammar ∷ Grammar ByteString
-ipv4AddressGrammar =
-  label
-    "IPv4address"
-    Grammar
-      { render = BSB.byteString
-      , parser = fmap fst $ P.match do
-          let o = decOctetGrammar.parser
-              d = P.single $ char '.'
-          o *> d *> o *> d *> o *> d *> o
-      , generator =
-          fmap (build . fold . List.intersperse ".") $
-            replicateM 4 (renderGenerator decOctetGrammar)
-      , renderGenerator = _
-      }
-
-regNameGrammar ∷ Grammar ByteString
-regNameGrammar =
-  label
-    "reg-name"
-    Grammar
-      { render = BSB.byteString
-      , parser =
-          fmap (build . fold) $
-            P.many $
-              asum @[]
-                [ fmap BSB.word8 $ parser unreservedGrammar
-                , fmap BSB.word8 $ parser pctEncodedGrammar
-                , fmap BSB.word8 $ parser subDelimGrammar
-                ]
-      , generator =
-          fmap (build . fold) $
-            QC.listOf $
-              QC.oneof
-                [ renderGenerator unreservedGrammar
-                , renderGenerator pctEncodedGrammar
-                , renderGenerator subDelimGrammar
-                ]
-      , renderGenerator = _
       }
 
 pathAbemptyGrammar ∷ Grammar (Seq ByteString)
@@ -593,7 +390,6 @@ pathAbemptyGrammar =
       { render = foldMap (\s → "/" <> segmentGrammar.render s)
       , parser = fmap Seq.fromList $ many $ P.single (char '/') *> segmentGrammar.parser
       , generator = fmap Seq.fromList $ QC.listOf segmentGrammar.generator
-      , renderGenerator = _
       }
 
 pathAbsoluteGrammar ∷ Grammar (Seq ByteString)
@@ -620,7 +416,6 @@ pathAbsoluteGrammar =
               (:<|)
                 <$> segmentNzGrammar.generator
                 <*> fmap Seq.fromList (QC.vectorOf (n - 1) segmentGrammar.generator)
-      , renderGenerator = _
       }
 
 pathNoschemeGrammar ∷ Grammar (NESeq ByteString)
@@ -639,7 +434,6 @@ pathNoschemeGrammar =
           x ← generator segmentNzNcGrammar
           xs ← fmap Seq.fromList $ QC.listOf $ generator segmentGrammar
           pure $ x :<|| xs
-      , renderGenerator = _
       }
 
 pathRootlessGrammar ∷ Grammar (NESeq ByteString)
@@ -658,7 +452,6 @@ pathRootlessGrammar =
           x ← generator segmentNzGrammar
           xs ← fmap Seq.fromList $ QC.listOf $ generator segmentGrammar
           pure $ x :<|| xs
-      , renderGenerator = _
       }
 
 pathEmptyGrammar ∷ Grammar ()
@@ -667,7 +460,6 @@ pathEmptyGrammar =
     { render = r
     , parser = pure ()
     , generator = pure ()
-    , renderGenerator = pure . r
     }
  where
   r = const mempty
@@ -682,7 +474,6 @@ segmentGrammar =
           fmap (build . fold) $ P.many $ parser pcharGrammar
       , generator =
           fmap (build . fold) $ QC.listOf $ renderGenerator pcharGrammar
-      , renderGenerator = _
       }
 
 segmentNzGrammar ∷ Grammar ByteString
@@ -716,20 +507,6 @@ segmentNzNcGrammar =
           ]
       )
   etc = tokenEnumeration $ char <$> ":"
-
-decOctetGrammar ∷ Grammar Word8
-decOctetGrammar =
-  label
-    "dec-octet"
-    Grammar
-      { render = BSB.word8Dec
-      , parser = do
-          xs ← some digitGrammar.parser
-          let n ∷ Natural = foldl' (\t x → (t * 10) + fromIntegral x) 0 xs
-          maybe empty pure $ toIntegralSized n
-      , generator = arbitrary
-      , renderGenerator = _
-      }
 
 queryGrammar ∷ Grammar ByteString
 queryGrammar = label "query" queryOrFragmentGrammar

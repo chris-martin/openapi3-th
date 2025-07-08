@@ -89,6 +89,7 @@ library
     Oath.Relation
     Oath.Uri.Rfc3986.Characters
     Oath.Uri.Rfc3986.Grammar
+    Oath.Uri.Rfc3986.Host
     Oath.Uri.Rfc3986.RelativeResolution
     Oath.Web.JsonReference
     Oath.Web.ResourceLocation

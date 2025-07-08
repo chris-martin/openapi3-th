@@ -2,8 +2,8 @@ module Oath.Grammar where
 
 import Essentials
 
-import Control.Applicative (Alternative (..), asum, liftA2)
-import Control.Monad (mfilter, replicateM, replicateM_, sequence, unless)
+import Control.Applicative (Alternative (..), asum, empty, liftA2)
+import Control.Monad (guard, mfilter, replicateM, replicateM_, sequence, unless)
 import Control.Monad.Fail
 import Control.Monad.Validate
 import Data.Bifunctor (first)
@@ -47,7 +47,7 @@ import Text.Megaparsec (Parsec)
 import Text.Megaparsec qualified as P
 import Text.Megaparsec.Byte.Lexer qualified as P
 import Text.Show (show)
-import Prelude (String, fromIntegral)
+import Prelude (String, error, fromIntegral)
 
 data Grammar a
   = Grammar
@@ -74,16 +74,12 @@ renderChoices xs x = do
       , generator = QC.oneof $ fmap (.generator) $ toList os
       }
 
-renderConcat ∷ [Maybe Render] → Maybe Render
-renderConcat =
-  fmap
-    ( \xs →
-        Render
-          { canonical = fold $ fmap (.canonical) xs
-          , generator = fmap fold $ sequence $ fmap (.generator) xs
-          }
-    )
-    . sequence
+renderConcat ∷ [Render] → Render
+renderConcat xs =
+  Render
+    { canonical = fold $ fmap (.canonical) xs
+    , generator = fmap fold $ sequence $ fmap (.generator) xs
+    }
 
 class HasGrammar a where
   grammar ∷ Grammar a
@@ -102,29 +98,29 @@ parser = (.parser)
 generator ∷ Grammar a → Gen a
 generator = (.generator)
 
+renderGenerator ∷ Grammar a → Gen Builder
+renderGenerator g = do
+  a ← g.generator
+  case g.render a of
+    Nothing → error "generator should only generate renderable values"
+    Just r → r.generator
+
 label ∷ String → Grammar a → Grammar a
 label l g = g {parser = P.label l g.parser}
 
 tokenEnumeration ∷ [Word8] → Grammar Word8
 tokenEnumeration xs =
-  Grammar
-    { parser = P.satisfy (`List.elem` xs)
-    , generator = QC.elements xs
-    , render = renderSimple BSB.word8
-    }
- where
-  r = BSB.word8
+  tokenPredicate (`List.elem` xs) (QC.elements xs)
 
 tokenPredicate ∷ (Word8 → Bool) → Gen Word8 → Grammar Word8
 tokenPredicate f generator =
   Grammar
     { parser = P.satisfy f
     , generator
-    , render = renderSimple BSB.word8
+    , render = \x → do
+        guard $ f x
+        Just $ renderConst $ BSB.word8 x
     }
-
-renderSimple ∷ (a → Builder) → a → Maybe Render
-renderSimple r x = Just $ renderConst $ r x
 
 build ∷ Builder → BS.StrictByteString
 build = BSL.toStrict . BSB.toLazyByteString

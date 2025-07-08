@@ -81,12 +81,11 @@ pctEncodedGrammar =
   label
     "pct-encoded"
     Grammar
-      { render = \x →
-          renderConcat
-            [ Just $ renderConst $ BSB.word8 $ char '%'
-            , render (hexdigGrammar UpperCase) (x `shiftR` 4)
-            , render (hexdigGrammar UpperCase) (x .&. 15)
-            ]
+      { render = \x → do
+          let pct = renderConst $ BSB.word8 $ char '%'
+          a ← render (hexdigGrammar UpperCase) (x `shiftR` 4)
+          b ← render (hexdigGrammar UpperCase) (x .&. 15)
+          Just $ renderConcat [pct, a, b]
       , parser = do
           P.single $ char '%'
           a ← parser $ hexdigGrammar UpperCase
