@@ -91,6 +91,7 @@ library
     Oath.Uri.Rfc3986.Grammar
     Oath.Uri.Rfc3986.Host
     Oath.Uri.Rfc3986.RelativeResolution
+    Oath.Uri.Rfc3986.Scheme
     Oath.Web.JsonReference
     Oath.Web.ResourceLocation
 

@@ -13,7 +13,7 @@ module Oath.Uri.Rfc3986.Grammar (
   Host (..),
   portGrammar,
   IpLiteral (..),
-  ipvFutureGrammar,
+  IpvFuture (..),
   ipv6AddressGrammar,
   ipv4AddressGrammar,
   regNameGrammar,
@@ -86,6 +86,9 @@ import Prelude (fromIntegral, (*), (+), (-))
 
 import Oath.Abnf.Rfc2234
 import Oath.Grammar
+import Oath.Uri.Rfc3986.Characters
+import Oath.Uri.Rfc3986.Host
+import Oath.Uri.Rfc3986.Scheme
 
 data Uri = Uri
   { scheme ∷ ByteString
@@ -283,36 +286,6 @@ instance HasGrammar RelativePart where
       RelativePart_Absolute p → render pathAbsoluteGrammar p
       RelativePart_Noscheme p → render pathNoschemeGrammar p
       RelativePart_Empty → render pathEmptyGrammar ()
-
-schemeGrammar ∷ Grammar ByteString
-schemeGrammar =
-  label "scheme" $
-    Grammar
-      { render = r
-      , parser = fmap fst $ P.match do
-          alphaGrammar.parser
-          P.many $
-            asum @[]
-              [ void $ parser alphaGrammar
-              , void $ parser digitGrammar
-              , void $ parser etc
-              ]
-          pure ()
-      , generator =
-          fmap BS.pack $
-            (:)
-              <$> (generator alphaGrammar)
-              <*> QC.listOf
-                ( QC.oneof
-                    [ generator alphaGrammar
-                    , generator digitGrammar
-                    , generator etc
-                    ]
-                )
-      }
- where
-  etc = tokenEnumeration $ char <$> "+-."
-  r = BSB.byteString
 
 data Authority = Authority
   { userinfo ∷ Maybe ByteString
