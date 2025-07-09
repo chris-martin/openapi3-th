@@ -141,3 +141,27 @@ prismGrammar p Grammar {render, parser, generator} =
     , parser = review p <$> parser
     , generator = review p <$> generator
     }
+
+constGrammar ∷ ByteString → Grammar ()
+constGrammar x =
+  Grammar
+    { render = \() → Just $ renderConst $ BSB.byteString x
+    , parser = void $ P.chunk x
+    , generator = pure ()
+    }
+
+bracketGrammar ∷ ByteString → ByteString → Grammar a → Grammar a
+bracketGrammar open close Grammar {render, parser, generator} =
+  Grammar
+    { render = \x →
+        ( \r →
+            renderConcat
+              [ renderConst $ BSB.byteString open
+              , r
+              , renderConst $ BSB.byteString close
+              ]
+        )
+          <$> render x
+    , parser = P.chunk open *> parser <* P.chunk close
+    , generator
+    }

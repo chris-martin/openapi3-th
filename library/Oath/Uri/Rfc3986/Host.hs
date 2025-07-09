@@ -84,25 +84,11 @@ instance HasGrammar Host where
 instance HasGrammar IpLiteral where
   grammar =
     label "IP-literal" $
-      Grammar
-        { render = \x → do
-            y ← case x of
-              IpLiteral_V6 x → render ipv6AddressGrammar x
-              IpLiteral_Future x → render grammar x
-            Just $ renderConcat [renderConst "[", y, renderConst "]"]
-        , parser =
-            P.single (char '[')
-              *> asum @[]
-                [ IpLiteral_V6 <$> parser ipv6AddressGrammar
-                , IpLiteral_Future <$> parser grammar
-                ]
-              <* P.single (char ']')
-        , generator =
-            QC.oneof
-              [ IpLiteral_V6 <$> generator ipv6AddressGrammar
-              , IpLiteral_Future <$> generator grammar
-              ]
-        }
+      grammarAlternatives
+        [ prismGrammar #_IpLiteral_V6 $
+            bracketGrammar "[" "]" ipv6AddressGrammar
+        , prismGrammar #_IpLiteral_Future grammar
+        ]
 
 instance HasGrammar IpvFuture where
   grammar =
