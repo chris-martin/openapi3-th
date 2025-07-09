@@ -142,6 +142,9 @@ prismGrammar p Grammar {render, parser, generator} =
     , generator = review p <$> generator
     }
 
+isoGrammar ∷ Iso' b a → Grammar a → Grammar b
+isoGrammar = prismGrammar . castOptic
+
 constGrammar ∷ ByteString → Grammar ()
 constGrammar x =
   Grammar
@@ -164,4 +167,12 @@ bracketGrammar open close Grammar {render, parser, generator} =
           <$> render x
     , parser = P.chunk open *> parser <* P.chunk close
     , generator
+    }
+
+listGrammar ∷ Grammar a → Grammar [a]
+listGrammar Grammar {render, parser, generator} =
+  Grammar
+    { render = fmap renderConcat . traverse render
+    , parser = P.many $ parser
+    , generator = QC.listOf generator
     }

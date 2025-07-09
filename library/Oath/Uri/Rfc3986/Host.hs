@@ -39,6 +39,7 @@ import GHC.Generics
 import Language.Haskell.TH.Quote
 import Language.Haskell.TH.Syntax
 import Numeric.Natural (Natural)
+import Optics
 import Optics.TH
 import Test.QuickCheck (Gen, liftArbitrary)
 import Test.QuickCheck qualified as QC
@@ -211,36 +212,14 @@ decOctetGrammar =
 
 regNameGrammar ∷ Grammar ByteString
 regNameGrammar =
-  label
-    "reg-name"
-    Grammar
-      { render = \x →
-          fmap renderConcat
-            $ traverse
-              ( renderChoices
-                  [ render unreservedGrammar
-                  , render subDelimGrammar
-                  , render pctEncodedGrammar
-                  ]
-              )
-            $ BS.unpack x
-      , parser =
-          fmap (build . fold) $
-            P.many $
-              asum @[]
-                [ fmap BSB.word8 $ parser unreservedGrammar
-                , fmap BSB.word8 $ parser subDelimGrammar
-                , fmap BSB.word8 $ parser pctEncodedGrammar
-                ]
-      , generator =
-          fmap (build . fold) $
-            QC.listOf $
-              QC.oneof
-                [ renderGenerator unreservedGrammar
-                , renderGenerator subDelimGrammar
-                , renderGenerator pctEncodedGrammar
-                ]
-      }
+  label "reg-name" $
+    isoGrammar (iso BS.unpack BS.pack) $
+      listGrammar $
+        grammarAlternatives
+          [ unreservedGrammar
+          , subDelimGrammar
+          , pctEncodedGrammar
+          ]
 
 deriving via
   TheGrammar Host
