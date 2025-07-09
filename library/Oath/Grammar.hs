@@ -39,6 +39,7 @@ import GHC.TypeLits
 import Language.Haskell.TH.Quote
 import Language.Haskell.TH.Syntax
 import Numeric.Natural (Natural)
+import Optics
 import Optics.TH
 import Test.QuickCheck (Gen)
 import Test.QuickCheck qualified as QC
@@ -124,3 +125,19 @@ tokenPredicate f generator =
 
 build ∷ Builder → BS.StrictByteString
 build = BSL.toStrict . BSB.toLazyByteString
+
+grammarAlternatives ∷ [Grammar a] → Grammar a
+grammarAlternatives xs =
+  Grammar
+    { render = \a → asum @[] $ fmap (\x → x.render a) xs
+    , parser = asum @[] $ fmap (.parser) xs
+    , generator = QC.oneof $ fmap (.generator) xs
+    }
+
+prismGrammar ∷ Prism' b a → Grammar a → Grammar b
+prismGrammar p Grammar {render, parser, generator} =
+  Grammar
+    { render = render <=< preview p
+    , parser = review p <$> parser
+    , generator = review p <$> generator
+    }

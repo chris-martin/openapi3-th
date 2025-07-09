@@ -57,41 +57,33 @@ data Host
   = Host_IpLiteral IpLiteral
   | Host_Ipv4 ByteString
   | Host_RegName ByteString
-  deriving Arbitrary via TheGrammar Host
-
-instance HasGrammar Host where
-  grammar =
-    label
-      "host"
-      Grammar
-        { render = \case
-            Host_IpLiteral x → render grammar x
-            Host_Ipv4 x → render ipv4AddressGrammar x
-            Host_RegName x → render regNameGrammar x
-        , parser =
-            asum @[]
-              [ Host_IpLiteral <$> parser grammar
-              , Host_Ipv4 <$> parser ipv4AddressGrammar
-              , Host_RegName <$> parser regNameGrammar
-              ]
-        , generator =
-            QC.oneof
-              [ Host_IpLiteral <$> generator grammar
-              , Host_Ipv4 <$> generator ipv4AddressGrammar
-              , Host_RegName <$> generator regNameGrammar
-              ]
-        }
 
 data IpLiteral
   = IpLiteral_V6 ByteString
   | IpLiteral_Future IpvFuture
   deriving stock Generic
-  deriving Arbitrary via TheGrammar IpLiteral
+
+data IpvFuture = IpvFuture
+  { version ∷ Word8
+  , address ∷ ByteString
+  }
+
+makePrismLabels ''Host
+makePrismLabels ''IpLiteral
+makeFieldLabels ''IpvFuture
+
+instance HasGrammar Host where
+  grammar =
+    label "host" $
+      grammarAlternatives
+        [ prismGrammar #_Host_IpLiteral grammar
+        , prismGrammar #_Host_Ipv4 ipv4AddressGrammar
+        , prismGrammar #_Host_RegName regNameGrammar
+        ]
 
 instance HasGrammar IpLiteral where
   grammar =
-    label
-      "IP-literal"
+    label "IP-literal" $
       Grammar
         { render = \x → do
             y ← case x of
@@ -111,8 +103,6 @@ instance HasGrammar IpLiteral where
               , IpLiteral_Future <$> generator grammar
               ]
         }
-
-data IpvFuture = IpvFuture {version ∷ Word8, address ∷ ByteString}
 
 instance HasGrammar IpvFuture where
   grammar =
@@ -265,3 +255,18 @@ regNameGrammar =
                 , renderGenerator pctEncodedGrammar
                 ]
       }
+
+deriving via
+  TheGrammar Host
+  instance
+    Arbitrary Host
+
+deriving via
+  TheGrammar IpLiteral
+  instance
+    Arbitrary IpLiteral
+
+deriving via
+  TheGrammar IpvFuture
+  instance
+    Arbitrary IpvFuture
