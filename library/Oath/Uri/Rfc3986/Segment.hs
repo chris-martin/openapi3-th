@@ -1,4 +1,8 @@
-module Oath.Uri.Rfc3986.Segment where
+module Oath.Uri.Rfc3986.Segment (
+  segmentGrammar,
+  segmentNzGrammar,
+  segmentNzNcGrammar,
+) where
 
 import Essentials
 
@@ -17,7 +21,7 @@ import Data.ByteString.Lazy qualified as BSL
 import Data.Char (Char)
 import Data.Char qualified as Char
 import Data.Either (Either (..), either)
-import Data.Foldable (fold, foldMap, foldl')
+import Data.Foldable (fold, foldMap, foldl', toList)
 import Data.Function (const)
 import Data.List qualified as List
 import Data.List.NonEmpty (NonEmpty ((:|)), nonEmpty)
@@ -39,6 +43,7 @@ import GHC.Generics
 import Language.Haskell.TH.Quote
 import Language.Haskell.TH.Syntax
 import Numeric.Natural (Natural)
+import Optics
 import Optics.TH
 import Test.QuickCheck (Gen, liftArbitrary)
 import Test.QuickCheck qualified as QC
@@ -57,65 +62,24 @@ import Oath.Uri.Rfc3986.Scheme
 
 segmentGrammar ∷ Grammar ByteString
 segmentGrammar =
-  label
-    "segment"
-    Grammar
-      { render =
-          fmap renderConcat . traverse (render pcharGrammar) . BS.unpack
-      , parser =
-          fmap BS.pack $ P.many $ parser pcharGrammar
-      , generator =
-          fmap (build . fold) $ QC.listOf $ renderGenerator pcharGrammar
-      }
+  label "segment" $
+    isoGrammar (iso BS.unpack BS.pack) $
+      listGrammar pcharGrammar
 
 segmentNzGrammar ∷ Grammar ByteString
 segmentNzGrammar =
-  label
-    "segment-nz"
-    Grammar
-      { render = \x → do
-          guard $ not $ BS.null x
-          fmap renderConcat $ traverse (render pcharGrammar) $ BS.unpack x
-      , parser =
-          fmap BS.pack $ P.some $ parser pcharGrammar
-      , generator =
-          fmap BS.pack $ QC.listOf1 $ generator pcharGrammar
-      }
+  label "segment-nz" $
+    prismGrammar (prism' (BS.pack . toList) (nonEmpty . BS.unpack)) $
+      list1Grammar pcharGrammar
 
 segmentNzNcGrammar ∷ Grammar ByteString
 segmentNzNcGrammar =
-  label
-    "segment-nz-nc"
-    Grammar
-      { render = \x → do
-          guard $ not $ BS.null x
-          fmap renderConcat $ traverse (render charGrammar) $ BS.unpack x
-      , parser = fmap BS.pack $ P.some $ parser charGrammar
-      , generator = fmap BS.pack $ QC.listOf1 $ generator charGrammar
-      }
- where
-  charGrammar =
-    Grammar
-      { render =
-          renderChoices
-            [ render unreservedGrammar
-            , render subDelimGrammar
-            , render etc
-            , render pctEncodedGrammar
-            ]
-      , parser =
-          asum @[]
-            [ unreservedGrammar.parser
-            , subDelimGrammar.parser
-            , etc.parser
-            , pctEncodedGrammar.parser
-            ]
-      , generator =
-          QC.oneof
-            [ generator unreservedGrammar
-            , generator subDelimGrammar
-            , generator etc
-            , generator pctEncodedGrammar
-            ]
-      }
-  etc = tokenEnumeration $ char <$> "@"
+  label "segment-nz-nc" $
+    prismGrammar (prism' (BS.pack . toList) (nonEmpty . BS.unpack)) $
+      list1Grammar $
+        grammarAlternatives
+          [ unreservedGrammar
+          , subDelimGrammar
+          , tokenEnumeration $ char <$> "@"
+          , pctEncodedGrammar
+          ]

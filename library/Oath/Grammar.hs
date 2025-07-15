@@ -210,3 +210,13 @@ listGrammar Grammar {render, parser, generator} =
     , parser = P.many $ parser
     , generator = QC.listOf generator
     }
+
+list1Grammar ∷ Grammar a → Grammar (NonEmpty a)
+list1Grammar Grammar {render, parser, generator} =
+  Grammar
+    { render = fmap (fold @NonEmpty) . traverse render
+    , parser = fmap f $ P.some $ parser
+    , generator = fmap f $ QC.listOf1 generator
+    }
+ where
+  f (x : xs) = x :| xs
