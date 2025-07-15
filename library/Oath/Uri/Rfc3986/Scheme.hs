@@ -1,4 +1,6 @@
-module Oath.Uri.Rfc3986.Scheme where
+module Oath.Uri.Rfc3986.Scheme (
+  schemeGrammar,
+) where
 
 import Essentials
 
@@ -39,6 +41,7 @@ import GHC.Generics
 import Language.Haskell.TH.Quote
 import Language.Haskell.TH.Syntax
 import Numeric.Natural (Natural)
+import Optics
 import Optics.TH
 import Test.QuickCheck (Gen, liftArbitrary)
 import Test.QuickCheck qualified as QC
@@ -56,42 +59,17 @@ import Oath.Uri.Rfc3986.Host
 
 schemeGrammar ∷ Grammar ByteString
 schemeGrammar =
-  label "scheme" $
-    Grammar
-      { render = \x → do
-          (a, bs) ← BS.uncons x
-          ra ← render alphaGrammar a
-          rbs ←
-            traverse
-              ( renderChoices
-                  [ render alphaGrammar
-                  , render digitGrammar
-                  , render etc
-                  ]
-              )
-              $ BS.unpack bs
-          Just $ renderConcat $ ra : rbs
-      , parser = fmap fst $ P.match do
-          parser alphaGrammar
-          P.many $
-            asum @[]
-              [ void $ parser alphaGrammar
-              , void $ parser digitGrammar
-              , void $ parser etc
-              ]
-          pure ()
-      , generator =
-          fmap BS.pack $
-            (:)
-              <$> (generator alphaGrammar)
-              <*> QC.listOf
-                ( QC.oneof
-                    [ generator alphaGrammar
-                    , generator digitGrammar
-                    , generator etc
-                    ]
-                )
-      }
- where
-  etc = tokenEnumeration $ char <$> "+-."
-  r = BSB.byteString
+  label "scheme"
+    $ prismGrammar
+      ( prism'
+          (\(x :& xs) → BS.pack $ x : xs)
+          (fmap (\(x, xs) → x :& BS.unpack xs) . BS.uncons)
+      )
+    $ alphaGrammar
+      <+> listGrammar
+        ( grammarAlternatives
+            [ alphaGrammar
+            , digitGrammar
+            , tokenEnumeration $ char <$> "+-."
+            ]
+        )
