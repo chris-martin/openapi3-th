@@ -93,47 +93,22 @@ instance HasGrammar IpLiteral where
 
 instance HasGrammar IpvFuture where
   grammar =
-    label
-      "IPvFuture"
-      Grammar
-        { render = \IpvFuture {version, address} → do
-            rv ← render vg version
-            Just $
-              renderConcat
-                [ renderConst "v"
-                , rv
-                , renderConst "."
-                , renderConst $ BSB.byteString address
+    label "IPvFuture"
+      $ isoGrammar
+        ( iso
+            (\IpvFuture {version, address} → version :& address)
+            (\(version :& address) → IpvFuture {version, address})
+        )
+      $ (constGrammar "v" +> hexdigGrammar UpperCase <+ constGrammar ".")
+        <+> isoGrammar
+          (iso BS.unpack BS.pack)
+          ( listGrammar $
+              grammarAlternatives
+                [ unreservedGrammar
+                , subDelimGrammar
+                , tokenEnumeration (char <$> ":")
                 ]
-        , parser = do
-            P.single $ char 'v'
-            version ← parser vg
-            P.single $ char '.'
-            address ←
-              fmap fst $
-                P.match $
-                  P.many $
-                    asum @[]
-                      [ void $ unreservedGrammar.parser
-                      , void $ subDelimGrammar.parser
-                      , void $ P.single $ char ':'
-                      ]
-            pure IpvFuture {version, address}
-        , generator = do
-            version ← generator vg
-            address ←
-              fmap (build . fold) $
-                QC.listOf1 $
-                  BSB.word8
-                    <$> QC.oneof
-                      [ generator unreservedGrammar
-                      , generator subDelimGrammar
-                      , pure $ char ':'
-                      ]
-            pure IpvFuture {version, address}
-        }
-   where
-    vg = hexdigGrammar UpperCase
+          )
 
 -- | Parsing is much more lenient than the spec out of laziness, could be improved
 ipv6AddressGrammar ∷ Grammar ByteString

@@ -50,6 +50,37 @@ import Text.Megaparsec.Byte.Lexer qualified as P
 import Text.Show (show)
 import Prelude (String, error, fromIntegral)
 
+infixl 2 :&
+infixl 4 <+>
+infixl 4 +>
+infixl 4 <+
+
+data a :& b = a :& b
+
+(<+>) ∷ Grammar a → Grammar b → Grammar (a :& b)
+ga <+> gb =
+  Grammar
+    { render = \(a :& b) → liftA2 (<>) (ga.render a) (gb.render b)
+    , parser = (:&) <$> ga.parser <*> gb.parser
+    , generator = (:&) <$> ga.generator <*> gb.generator
+    }
+
+(+>) ∷ Grammar () → Grammar b → Grammar b
+ga +> gb =
+  Grammar
+    { render = \b → liftA2 (<>) (ga.render ()) (gb.render b)
+    , parser = ga.parser *> gb.parser
+    , generator = gb.generator
+    }
+
+(<+) ∷ Grammar a → Grammar () → Grammar a
+ga <+ gb =
+  Grammar
+    { render = \a → liftA2 (<>) (ga.render a) (gb.render ())
+    , parser = ga.parser <* gb.parser
+    , generator = ga.generator
+    }
+
 data Grammar a
   = Grammar
   { parser ∷ Parsec Void ByteString a
@@ -61,6 +92,16 @@ data Render = Render
   { canonical ∷ Builder
   , generator ∷ Gen Builder
   }
+
+instance Semigroup Render where
+  a <> b =
+    Render
+      { canonical = a.canonical <> b.canonical
+      , generator = liftA2 (<>) a.generator b.generator
+      }
+
+instance Monoid Render where
+  mempty = Render {canonical = mempty, generator = pure mempty}
 
 renderConst ∷ Builder → Render
 renderConst canonical =
@@ -74,13 +115,6 @@ renderChoices xs x = do
       { canonical = o.canonical
       , generator = QC.oneof $ fmap (.generator) $ toList os
       }
-
-renderConcat ∷ [Render] → Render
-renderConcat xs =
-  Render
-    { canonical = fold $ fmap (.canonical) xs
-    , generator = fmap fold $ sequence $ fmap (.generator) xs
-    }
 
 class HasGrammar a where
   grammar ∷ Grammar a
@@ -158,7 +192,7 @@ bracketGrammar open close Grammar {render, parser, generator} =
   Grammar
     { render = \x →
         ( \r →
-            renderConcat
+            fold @[]
               [ renderConst $ BSB.byteString open
               , r
               , renderConst $ BSB.byteString close
@@ -172,7 +206,7 @@ bracketGrammar open close Grammar {render, parser, generator} =
 listGrammar ∷ Grammar a → Grammar [a]
 listGrammar Grammar {render, parser, generator} =
   Grammar
-    { render = fmap renderConcat . traverse render
+    { render = fmap (fold @[]) . traverse render
     , parser = P.many $ parser
     , generator = QC.listOf generator
     }

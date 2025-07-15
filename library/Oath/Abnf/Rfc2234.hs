@@ -102,31 +102,16 @@ hexdigToChar ∷ Case → Word8 → Word8
 hexdigToChar c x =
   x + (if x < 10 then char '0' else caseA c)
 
-hexLetterNumParserInCase ∷ Case → Parsec Void ByteString Word8
-hexLetterNumParserInCase c =
-  let (a, f) = caseAF c
-   in fmap
-        (\x → x - a + 10)
-        $ P.satisfy (\x → x >= a && x <= f)
-
 hexdigGrammar
   ∷ Case
   -- ^ Case for canonical rendering
   → Grammar Word8
 hexdigGrammar c =
-  label
-    "HEXDIG"
-    Grammar
-      { render =
-          renderChoices
-            [ render digitGrammar
-            , render $ hexLetterGrammar c
-            ]
-      , parser =
-          digitGrammar.parser
-            <|> (hexLetterGrammar c).parser
-      , generator = QC.choose (0, 15)
-      }
+  label "HEXDIG" $
+    grammarAlternatives
+      [ digitGrammar
+      , hexLetterGrammar c
+      ]
 
 hexLetterGrammar
   ∷ Case
@@ -149,3 +134,10 @@ hexLetterGrammar c =
     guard $ x >= 10
     guard $ x <= 15
     Just $ renderConst $ BSB.word8 $ caseA c + x
+
+  hexLetterNumParserInCase ∷ Case → Parsec Void ByteString Word8
+  hexLetterNumParserInCase c =
+    let (a, f) = caseAF c
+     in fmap
+          (\x → x - a + 10)
+          $ P.satisfy (\x → x >= a && x <= f)

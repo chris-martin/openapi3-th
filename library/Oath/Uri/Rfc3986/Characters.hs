@@ -51,76 +51,36 @@ import Prelude (fromIntegral, (*), (+), (-))
 
 import Oath.Abnf.Rfc2234
 import Oath.Grammar
+import Optics
 
 pcharGrammar ∷ Grammar Word8
 pcharGrammar =
-  label
-    "pchar"
-    Grammar
-      { render =
-          renderChoices
-            [ render unreservedGrammar
-            , render subDelimGrammar
-            , render etc
-            , render pctEncodedGrammar
-            ]
-      , generator = arbitrary
-      , parser =
-          asum @[]
-            [ parser unreservedGrammar
-            , parser subDelimGrammar
-            , parser etc
-            , parser pctEncodedGrammar
-            ]
-      }
- where
-  etc = tokenEnumeration $ char <$> ":@"
+  label "pchar" $
+    grammarAlternatives
+      [ unreservedGrammar
+      , subDelimGrammar
+      , tokenEnumeration $ char <$> ":@"
+      , pctEncodedGrammar
+      ]
 
 pctEncodedGrammar ∷ Grammar Word8
 pctEncodedGrammar =
-  label
-    "pct-encoded"
-    Grammar
-      { render = \x → do
-          let pct = renderConst $ BSB.word8 $ char '%'
-          a ← render (hexdigGrammar UpperCase) (x `shiftR` 4)
-          b ← render (hexdigGrammar UpperCase) (x .&. 15)
-          Just $ renderConcat [pct, a, b]
-      , parser = do
-          P.single $ char '%'
-          a ← parser $ hexdigGrammar UpperCase
-          b ← parser $ hexdigGrammar UpperCase
-          pure $ (a `shiftL` 4) + b
-      , generator = arbitrary
-      }
+  label "pct-encoded"
+    $ isoGrammar
+      ( iso
+          (\x → (x `shiftR` 4) :& (x .&. 15))
+          (\(a :& b) → (a `shiftL` 4) + b)
+      )
+    $ constGrammar "%" +> hexdigGrammar UpperCase <+> hexdigGrammar UpperCase
 
 unreservedGrammar ∷ Grammar Word8
 unreservedGrammar =
-  label
-    "unreserved"
-    Grammar
-      { render =
-          renderChoices
-            [ render alphaGrammar
-            , render digitGrammar
-            , render etc
-            ]
-      , parser =
-          asum @[]
-            [ parser alphaGrammar
-            , parser digitGrammar
-            , parser etc
-            ]
-      , generator =
-          QC.oneof
-            [ generator alphaGrammar
-            , generator digitGrammar
-            , generator etc
-            ]
-      }
- where
-  etc = tokenEnumeration $ char <$> "-._~"
-  r = BSB.word8
+  label "unreserved" $
+    grammarAlternatives
+      [ alphaGrammar
+      , digitGrammar
+      , tokenEnumeration $ char <$> "-._~"
+      ]
 
 reservedGrammar ∷ Grammar Word8
 reservedGrammar = label "reserved" $ tokenEnumeration $ genDelims <> subDelims
