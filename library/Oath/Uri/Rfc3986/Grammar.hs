@@ -86,6 +86,7 @@ import Prelude (fromIntegral, (*), (+), (-))
 
 import Oath.Abnf.Rfc2234
 import Oath.Grammar
+import Oath.Uri.Rfc3986.Appendages
 import Oath.Uri.Rfc3986.Characters
 import Oath.Uri.Rfc3986.Host
 import Oath.Uri.Rfc3986.Scheme
@@ -437,29 +438,3 @@ pathEmptyGrammar =
     }
  where
   r = const mempty
-
-queryGrammar ∷ Grammar ByteString
-queryGrammar = label "query" queryOrFragmentGrammar
-
-fragmentGrammar ∷ Grammar ByteString
-fragmentGrammar = label "fragment" queryOrFragmentGrammar
-
-queryOrFragmentGrammar ∷ Grammar ByteString
-queryOrFragmentGrammar =
-  textGrammar
-    ( void $
-        P.many $
-          asum @[]
-            [ void $ parser pcharGrammar
-            , void $ parser etc
-            ]
-    )
-    ( fmap fold $
-        QC.listOf $
-          QC.oneof
-            [ renderGenerator pcharGrammar
-            , renderGenerator etc
-            ]
-    )
- where
-  etc = tokenEnumeration $ char <$> "/?"

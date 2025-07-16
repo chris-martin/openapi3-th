@@ -87,6 +87,7 @@ library
     Oath.Operation.Testing
     Oath.Operation.Wai
     Oath.Relation
+    Oath.Uri.Rfc3986.Appendages
     Oath.Uri.Rfc3986.Characters
     Oath.Uri.Rfc3986.Grammar
     Oath.Uri.Rfc3986.Host
