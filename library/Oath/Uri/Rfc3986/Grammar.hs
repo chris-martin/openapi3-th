@@ -87,11 +87,11 @@ import Prelude (fromIntegral, (*), (+), (-))
 import Oath.Abnf.Rfc2234
 import Oath.Grammar
 import Oath.Uri.Rfc3986.Appendages
+import Oath.Uri.Rfc3986.Authority
 import Oath.Uri.Rfc3986.Characters
 import Oath.Uri.Rfc3986.Host
 import Oath.Uri.Rfc3986.Scheme
 import Oath.Uri.Rfc3986.Segment
-import Oath.Uri.Rfc3986.Userinfo
 
 data Uri = Uri
   { scheme ∷ ByteString
@@ -289,49 +289,6 @@ instance HasGrammar RelativePart where
       RelativePart_Absolute p → render pathAbsoluteGrammar p
       RelativePart_Noscheme p → render pathNoschemeGrammar p
       RelativePart_Empty → render pathEmptyGrammar ()
-
-data Authority = Authority
-  { userinfo ∷ Maybe ByteString
-  , host ∷ Host
-  , port ∷ Maybe ByteString
-  }
-  deriving Arbitrary via TheGrammar Authority
-
-instance HasGrammar Authority where
-  grammar =
-    label
-      "authority"
-      Grammar
-        { render = r
-        , parser = P.label "authority" do
-            userinfo ← P.optional $ P.try $ parser userinfoGrammar <* P.single (char '@')
-            host ← parser grammar
-            port ← P.optional $ P.single (char ':') *> parser portGrammar
-            pure Authority {userinfo, host, port}
-        , generator = do
-            userinfo ← liftArbitrary $ generator userinfoGrammar
-            host ← generator grammar
-            port ← liftArbitrary $ generator portGrammar
-            pure Authority {userinfo, host, port}
-        }
-   where
-    r x =
-      foldMap (\u → render userinfoGrammar u <> "@") x.userinfo
-        <> render grammar x.host
-        <> foldMap (\p → ":" <> render portGrammar p) x.port
-
-portGrammar ∷ Grammar ByteString
-portGrammar =
-  label
-    "port"
-    Grammar
-      { render = BSB.byteString
-      , parser = fmap fst $ P.match $ P.many $ parser digitGrammar
-      , generator =
-          fmap (build . fold) $
-            QC.listOf $
-              BSB.word8 <$> generator digitGrammar
-      }
 
 pathAbemptyGrammar ∷ Grammar (Seq ByteString)
 pathAbemptyGrammar =

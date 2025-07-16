@@ -71,14 +71,16 @@ pctEncodedGrammar =
           (\x → (x `shiftR` 4) :& (x .&. 15))
           (\(a :& b) → (a `shiftL` 4) + b)
       )
-    $ constGrammar "%" +> hexdigGrammar UpperCase <+> hexdigGrammar UpperCase
+    $ constGrammar "%"
+      +> hexdigNumGrammar UpperCase
+      <+> hexdigNumGrammar UpperCase
 
 unreservedGrammar ∷ Grammar Word8
 unreservedGrammar =
   label "unreserved" $
     grammarAlternatives
       [ alphaGrammar
-      , digitGrammar
+      , digitCharGrammar
       , tokenEnumeration $ char <$> "-._~"
       ]
 

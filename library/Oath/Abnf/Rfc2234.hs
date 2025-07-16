@@ -2,9 +2,11 @@
 module Oath.Abnf.Rfc2234 (
   char,
   alphaGrammar,
-  digitGrammar,
+  digitNumGrammar,
+  digitCharGrammar,
   Case (..),
-  hexdigGrammar,
+  hexdigNumGrammar,
+  hexdigCharGrammar,
 ) where
 
 import Essentials
@@ -37,6 +39,7 @@ import GHC.Generics
 import Language.Haskell.TH.Quote
 import Language.Haskell.TH.Syntax
 import Numeric.Natural (Natural)
+import Optics
 import Optics.TH
 import Test.QuickCheck (Gen)
 import Test.QuickCheck qualified as QC
@@ -48,6 +51,7 @@ import Text.Show (show)
 import Prelude (Num ((+), (-)), fromIntegral)
 
 import Oath.Grammar
+import Oath.Grammar qualified as Grammar (Grammar (..))
 
 char ∷ Char → Word8
 char = fromIntegral . Char.ord
@@ -66,16 +70,26 @@ alphaGrammar =
           ]
       )
 
-digitGrammar ∷ Grammar Word8
-digitGrammar =
+digitNumGrammar ∷ Grammar Word8
+digitNumGrammar =
+  prismGrammar
+    ( prism'
+        (\x → x - char '0')
+        ( \x → do
+            guard $ x <= 9
+            pure $ x + char '0'
+        )
+    )
+    digitCharGrammar
+
+digitCharGrammar ∷ Grammar Word8
+digitCharGrammar =
   label
     "DIGIT"
     Grammar
-      { render = \x → do
-          guard $ x <= 9
-          Just $ renderConst $ BSB.char8 $ Char.chr $ Char.ord '0' + fromIntegral x
-      , parser = (\x → x - char '0') <$> P.satisfy (\x → x >= char '0' && x <= char '0')
-      , generator = QC.choose (0, 9)
+      { render = Just . renderConst . BSB.word8
+      , parser = P.satisfy (\x → x >= char '0' && x <= char '0')
+      , generator = QC.choose (char '0', char '9')
       }
 
 data Case = UpperCase | LowerCase
@@ -102,42 +116,59 @@ hexdigToChar ∷ Case → Word8 → Word8
 hexdigToChar c x =
   x + (if x < 10 then char '0' else caseA c)
 
-hexdigGrammar
-  ∷ Case
-  -- ^ Case for canonical rendering
-  → Grammar Word8
-hexdigGrammar c =
+hexdigNumGrammar ∷ Case → Grammar Word8
+hexdigNumGrammar c =
+  (grammarAlternatives [digitNumGrammar, afNumGrammar c])
+    { Grammar.generator = QC.choose (0, 15)
+    }
+
+hexdigCharGrammar ∷ Case → Grammar Word8
+hexdigCharGrammar c =
   label "HEXDIG" $
     grammarAlternatives
-      [ digitGrammar
-      , hexLetterGrammar c
+      [ digitNumGrammar
+      , afCharGrammar c
       ]
 
-hexLetterGrammar
-  ∷ Case
-  -- ^ For rendering and generating; does not affect parsing
-  → Grammar Word8
-hexLetterGrammar c =
-  Grammar
-    { render =
-        renderChoices
-          [ r c
-          , r (otherCase c)
-          ]
-    , parser =
-        hexLetterNumParserInCase LowerCase
-          <|> hexLetterNumParserInCase UpperCase
-    , generator = QC.choose (10, 15)
-    }
- where
-  r c' x = do
-    guard $ x >= 10
-    guard $ x <= 15
-    Just $ renderConst $ BSB.word8 $ caseA c + x
+afNumGrammar ∷ Case → Grammar Word8
+afNumGrammar c =
+  prismGrammar
+    ( prism'
+        ( \x →
+            if
+              | x >= char 'a' && x <= char 'f' → x - char 'a'
+              | x >= char 'A' && x <= char 'F' → x - char 'A'
+              | otherwise → undefined
+        )
+        ( \x → do
+            guard $ x <= 15
+            pure $ x + caseA c
+        )
+    )
+    (afCharGrammar c)
 
-  hexLetterNumParserInCase ∷ Case → Parsec Void ByteString Word8
-  hexLetterNumParserInCase c =
-    let (a, f) = caseAF c
-     in fmap
-          (\x → x - a + 10)
-          $ P.satisfy (\x → x >= a && x <= f)
+afCharGrammar ∷ Case → Grammar Word8
+afCharGrammar c =
+  Grammar
+    { render = \x → do
+        n ←
+          if
+            | x >= char 'a' && x <= char 'f' → Just $ x - char 'a'
+            | x >= char 'A' && x <= char 'F' → Just $ x - char 'A'
+            | otherwise → Nothing
+        pure
+          Render
+            { canonical = BSB.word8 $ hexdigToChar c n
+            , generator = do
+                c' ← QC.elements [c, otherCase c]
+                pure $ BSB.word8 $ hexdigToChar c' n
+            }
+    , parser = P.satisfy \x →
+        (x >= char 'a' && x <= char 'f')
+          || (x >= char 'A' && x <= char 'F')
+    , generator =
+        QC.oneof
+          [ QC.choose (char 'a', char 'f')
+          , QC.choose (char 'A', char 'F')
+          ]
+    }

@@ -1,4 +1,4 @@
-module Oath.Uri.Rfc3986.Userinfo where
+module Oath.Uri.Rfc3986.Authority where
 
 import Essentials
 
@@ -58,6 +58,36 @@ import Oath.Uri.Rfc3986.Host
 import Oath.Uri.Rfc3986.Scheme
 import Oath.Uri.Rfc3986.Segment
 
+data Authority = Authority
+  { userinfo ∷ Maybe ByteString
+  , host ∷ Host
+  , port ∷ Maybe ByteString
+  }
+  deriving Arbitrary via TheGrammar Authority
+
+instance HasGrammar Authority where
+  grammar =
+    label
+      "authority"
+      Grammar
+        { render = r
+        , parser = do
+            userinfo ← P.optional $ P.try $ parser userinfoGrammar <* P.single (char '@')
+            host ← parser grammar
+            port ← P.optional $ P.single (char ':') *> parser portGrammar
+            pure Authority {userinfo, host, port}
+        , generator = do
+            userinfo ← liftArbitrary $ generator userinfoGrammar
+            host ← generator grammar
+            port ← liftArbitrary $ generator portGrammar
+            pure Authority {userinfo, host, port}
+        }
+   where
+    r x =
+      foldMap (\u → render userinfoGrammar u <> "@") x.userinfo
+        <> render grammar x.host
+        <> foldMap (\p → ":" <> render portGrammar p) x.port
+
 userinfoGrammar ∷ Grammar ByteString
 userinfoGrammar =
   label "userinfo" $
@@ -69,3 +99,9 @@ userinfoGrammar =
           , subDelimGrammar
           , tokenEnumeration $ char <$> ":"
           ]
+
+portGrammar ∷ Grammar ByteString
+portGrammar =
+  label "port" $
+    isoGrammar (iso BS.unpack BS.pack) $
+      listGrammar digitCharGrammar

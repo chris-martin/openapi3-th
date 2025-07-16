@@ -15,6 +15,7 @@ common base
     DerivingVia
     DuplicateRecordFields
     LambdaCase
+    MultiWayIf
     NoFieldSelectors
     NoImplicitPrelude
     OverloadedLabels
@@ -88,13 +89,13 @@ library
     Oath.Operation.Wai
     Oath.Relation
     Oath.Uri.Rfc3986.Appendages
+    Oath.Uri.Rfc3986.Authority
     Oath.Uri.Rfc3986.Characters
     Oath.Uri.Rfc3986.Grammar
     Oath.Uri.Rfc3986.Host
     Oath.Uri.Rfc3986.RelativeResolution
     Oath.Uri.Rfc3986.Scheme
     Oath.Uri.Rfc3986.Segment
-    Oath.Uri.Rfc3986.Userinfo
     Oath.Web.JsonReference
     Oath.Web.ResourceLocation
 

@@ -69,7 +69,7 @@ schemeGrammar =
       <+> listGrammar
         ( grammarAlternatives
             [ alphaGrammar
-            , digitGrammar
+            , digitCharGrammar
             , tokenEnumeration $ char <$> "+-."
             ]
         )

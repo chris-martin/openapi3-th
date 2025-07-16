@@ -99,7 +99,7 @@ instance HasGrammar IpvFuture where
             (\IpvFuture {version, address} → version :& address)
             (\(version :& address) → IpvFuture {version, address})
         )
-      $ (constGrammar "v" +> hexdigGrammar UpperCase <+ constGrammar ".")
+      $ (constGrammar "v" +> hexdigCharGrammar UpperCase <+ constGrammar ".")
         <+> isoGrammar
           (iso BS.unpack BS.pack)
           ( listGrammar $
@@ -155,7 +155,7 @@ ipv6AddressGrammar =
       [ h16 ^ pure ":" ^ h16
       , renderGenerator ipv4AddressGrammar
       ]
-  hex = hexdigGrammar UpperCase
+  hex = hexdigCharGrammar UpperCase
 
 ipv4AddressGrammar ∷ Grammar ByteString
 ipv4AddressGrammar =
@@ -179,7 +179,7 @@ decOctetGrammar =
     Grammar
       { render = Just . renderConst . BSB.word8Dec
       , parser = do
-          xs ← some digitGrammar.parser
+          xs ← some digitNumGrammar.parser
           let n ∷ Natural = foldl' (\t x → (t * 10) + fromIntegral x) 0 xs
           maybe empty pure $ toIntegralSized n
       , generator = arbitrary
