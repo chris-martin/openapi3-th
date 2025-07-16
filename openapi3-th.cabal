@@ -94,6 +94,7 @@ library
     Oath.Uri.Rfc3986.RelativeResolution
     Oath.Uri.Rfc3986.Scheme
     Oath.Uri.Rfc3986.Segment
+    Oath.Uri.Rfc3986.Userinfo
     Oath.Web.JsonReference
     Oath.Web.ResourceLocation
 

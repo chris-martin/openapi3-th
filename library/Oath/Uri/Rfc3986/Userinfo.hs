@@ -1,5 +1,4 @@
--- | Note that "appendage" is not a term from the RFC.
-module Oath.Uri.Rfc3986.Appendages where
+module Oath.Uri.Rfc3986.Userinfo where
 
 import Essentials
 
@@ -53,22 +52,20 @@ import Prelude (fromIntegral, (*), (+), (-))
 
 import Oath.Abnf.Rfc2234
 import Oath.Grammar
+import Oath.Uri.Rfc3986.Appendages
 import Oath.Uri.Rfc3986.Characters
 import Oath.Uri.Rfc3986.Host
 import Oath.Uri.Rfc3986.Scheme
 import Oath.Uri.Rfc3986.Segment
 
-queryGrammar ∷ Grammar ByteString
-queryGrammar = label "query" appendageGrammar
-
-fragmentGrammar ∷ Grammar ByteString
-fragmentGrammar = label "fragment" appendageGrammar
-
-appendageGrammar ∷ Grammar ByteString
-appendageGrammar =
-  isoGrammar (iso BS.unpack BS.pack) $
-    listGrammar $
-      grammarAlternatives
-        [ pcharGrammar
-        , tokenEnumeration $ char <$> "/?"
-        ]
+userinfoGrammar ∷ Grammar ByteString
+userinfoGrammar =
+  label "userinfo" $
+    isoGrammar (iso BS.unpack BS.pack) $
+      listGrammar $
+        grammarAlternatives
+          [ unreservedGrammar
+          , pctEncodedGrammar
+          , subDelimGrammar
+          , tokenEnumeration $ char <$> ":"
+          ]

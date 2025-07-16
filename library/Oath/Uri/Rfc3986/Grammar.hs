@@ -91,6 +91,7 @@ import Oath.Uri.Rfc3986.Characters
 import Oath.Uri.Rfc3986.Host
 import Oath.Uri.Rfc3986.Scheme
 import Oath.Uri.Rfc3986.Segment
+import Oath.Uri.Rfc3986.Userinfo
 
 data Uri = Uri
   { scheme ∷ ByteString
@@ -318,31 +319,6 @@ instance HasGrammar Authority where
       foldMap (\u → render userinfoGrammar u <> "@") x.userinfo
         <> render grammar x.host
         <> foldMap (\p → ":" <> render portGrammar p) x.port
-
-userinfoGrammar ∷ Grammar ByteString
-userinfoGrammar =
-  label "userinfo" $
-    Grammar
-      { render = BSB.byteString
-      , parser =
-          fmap (build . fold) $
-            P.many $
-              asum @[]
-                [ fmap BSB.word8 $ unreservedGrammar.parser
-                , fmap BSB.word8 $ pctEncodedGrammar.parser
-                , fmap BSB.word8 $ subDelimGrammar.parser
-                , fmap BSB.word8 $ P.single $ char ':'
-                ]
-      , generator =
-          fmap (build . fold) $
-            QC.listOf $
-              QC.oneof
-                [ renderGenerator unreservedGrammar
-                , renderGenerator pctEncodedGrammar
-                , renderGenerator subDelimGrammar
-                , pure ":"
-                ]
-      }
 
 portGrammar ∷ Grammar ByteString
 portGrammar =
