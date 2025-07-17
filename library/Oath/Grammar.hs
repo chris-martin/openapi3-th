@@ -187,6 +187,14 @@ constGrammar x =
     , generator = pure ()
     }
 
+emptyGrammar ∷ Grammar ()
+emptyGrammar =
+  Grammar
+    { render = \() → Just $ renderConst mempty
+    , parser = pure ()
+    , generator = pure ()
+    }
+
 bracketGrammar ∷ ByteString → ByteString → Grammar a → Grammar a
 bracketGrammar open close Grammar {render, parser, generator} =
   Grammar
@@ -209,6 +217,14 @@ listGrammar Grammar {render, parser, generator} =
     { render = fmap (fold @[]) . traverse render
     , parser = P.many $ parser
     , generator = QC.listOf generator
+    }
+
+seqGrammar ∷ Grammar a → Grammar (Seq a)
+seqGrammar Grammar {render, parser, generator} =
+  Grammar
+    { render = fmap (fold @Seq) . traverse render
+    , parser = fmap Seq.fromList $ P.many $ parser
+    , generator = fmap Seq.fromList $ QC.listOf generator
     }
 
 list1Grammar ∷ Grammar a → Grammar (NonEmpty a)

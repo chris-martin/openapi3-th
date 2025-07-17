@@ -93,6 +93,7 @@ library
     Oath.Uri.Rfc3986.Characters
     Oath.Uri.Rfc3986.Grammar
     Oath.Uri.Rfc3986.Host
+    Oath.Uri.Rfc3986.Path
     Oath.Uri.Rfc3986.RelativeResolution
     Oath.Uri.Rfc3986.Scheme
     Oath.Uri.Rfc3986.Segment

@@ -90,6 +90,7 @@ import Oath.Uri.Rfc3986.Appendages
 import Oath.Uri.Rfc3986.Authority
 import Oath.Uri.Rfc3986.Characters
 import Oath.Uri.Rfc3986.Host
+import Oath.Uri.Rfc3986.Path
 import Oath.Uri.Rfc3986.Scheme
 import Oath.Uri.Rfc3986.Segment
 
@@ -289,85 +290,3 @@ instance HasGrammar RelativePart where
       RelativePart_Absolute p → render pathAbsoluteGrammar p
       RelativePart_Noscheme p → render pathNoschemeGrammar p
       RelativePart_Empty → render pathEmptyGrammar ()
-
-pathAbemptyGrammar ∷ Grammar (Seq ByteString)
-pathAbemptyGrammar =
-  label
-    "path-abempty"
-    Grammar
-      { render = foldMap (\s → "/" <> segmentGrammar.render s)
-      , parser = fmap Seq.fromList $ many $ P.single (char '/') *> segmentGrammar.parser
-      , generator = fmap Seq.fromList $ QC.listOf segmentGrammar.generator
-      }
-
-pathAbsoluteGrammar ∷ Grammar (Seq ByteString)
-pathAbsoluteGrammar =
-  label
-    "path-absolute"
-    Grammar
-      { render = \ss →
-          "/" <> case ss of
-            Empty → mempty
-            x :<| xs →
-              segmentNzGrammar.render x
-                <> foldMap (\s → "/" <> segmentGrammar.render s) xs
-      , parser = do
-          P.single $ char '/'
-          x ← segmentNzGrammar.parser
-          xs ← fmap Seq.fromList $ many $ P.single (char '/') *> segmentGrammar.parser
-          pure $ x :<| xs
-      , generator = QC.sized \size → do
-          n ← QC.choose (0, size)
-          case n of
-            0 → pure []
-            n →
-              (:<|)
-                <$> segmentNzGrammar.generator
-                <*> fmap Seq.fromList (QC.vectorOf (n - 1) segmentGrammar.generator)
-      }
-
-pathNoschemeGrammar ∷ Grammar (NESeq ByteString)
-pathNoschemeGrammar =
-  label
-    "path-noscheme"
-    Grammar
-      { render = \(x :<|| xs) →
-          render segmentNzNcGrammar x
-            <> foldMap (\s → "/" <> render segmentGrammar s) xs
-      , parser = do
-          x ← parser segmentNzNcGrammar
-          xs ← fmap Seq.fromList $ P.many $ P.single (char '/') *> parser segmentGrammar
-          pure $ x :<|| xs
-      , generator = do
-          x ← generator segmentNzNcGrammar
-          xs ← fmap Seq.fromList $ QC.listOf $ generator segmentGrammar
-          pure $ x :<|| xs
-      }
-
-pathRootlessGrammar ∷ Grammar (NESeq ByteString)
-pathRootlessGrammar =
-  label
-    "path-rootless"
-    Grammar
-      { render = \(x :<|| xs) →
-          render segmentNzGrammar x
-            <> foldMap (\s → "/" <> render segmentGrammar s) xs
-      , parser = do
-          x ← parser segmentNzGrammar
-          xs ← fmap Seq.fromList $ P.many $ P.single (char '/') *> parser segmentGrammar
-          pure $ x :<|| xs
-      , generator = do
-          x ← generator segmentNzGrammar
-          xs ← fmap Seq.fromList $ QC.listOf $ generator segmentGrammar
-          pure $ x :<|| xs
-      }
-
-pathEmptyGrammar ∷ Grammar ()
-pathEmptyGrammar =
-  Grammar
-    { render = r
-    , parser = pure ()
-    , generator = pure ()
-    }
- where
-  r = const mempty
