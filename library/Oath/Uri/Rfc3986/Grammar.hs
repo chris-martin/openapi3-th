@@ -91,6 +91,7 @@ import Oath.Uri.Rfc3986.Authority
 import Oath.Uri.Rfc3986.Characters
 import Oath.Uri.Rfc3986.Host
 import Oath.Uri.Rfc3986.Path
+import Oath.Uri.Rfc3986.RelativeRef
 import Oath.Uri.Rfc3986.Scheme
 import Oath.Uri.Rfc3986.Segment
 
@@ -223,70 +224,3 @@ instance HasGrammar AbsoluteUri where
         <> ":"
         <> render grammar x.hierPart
         <> foldMap (\q → "?" <> render queryGrammar q) x.query
-
-data RelativeRef = RelativeRef
-  { relativePart ∷ RelativePart
-  , query ∷ Maybe ByteString
-  , fragment ∷ Maybe ByteString
-  }
-  deriving stock Generic
-  deriving Arbitrary via TheGrammar RelativeRef
-
-instance HasGrammar RelativeRef where
-  grammar =
-    label
-      "relative-ref"
-      Grammar
-        { render = r
-        , parser = do
-            relativePart ← parser grammar
-            query ← P.optional $ P.single (char '?') *> parser queryGrammar
-            fragment ← P.optional $ P.single (char '#') *> parser fragmentGrammar
-            pure RelativeRef {relativePart, query, fragment}
-        , generator = do
-            relativePart ← generator grammar
-            query ← liftArbitrary $ generator queryGrammar
-            fragment ← liftArbitrary $ generator fragmentGrammar
-            pure RelativeRef {relativePart, query, fragment}
-        }
-   where
-    r x =
-      render grammar x.relativePart
-        <> foldMap (\q → "?" <> render queryGrammar q) x.query
-        <> foldMap (\f → "#" <> render fragmentGrammar f) x.fragment
-
-data RelativePart
-  = RelativePart_Authority Authority (Seq ByteString)
-  | RelativePart_Absolute (Seq ByteString)
-  | RelativePart_Noscheme (NESeq ByteString)
-  | RelativePart_Empty
-  deriving stock Generic
-  deriving Arbitrary via TheGrammar RelativePart
-
-instance HasGrammar RelativePart where
-  grammar =
-    label
-      "relative-part"
-      Grammar
-        { render = r
-        , parser =
-            asum @[]
-              [ P.chunk "//" *> (RelativePart_Authority <$> parser grammar <*> parser pathAbemptyGrammar)
-              , RelativePart_Absolute <$> parser pathAbsoluteGrammar
-              , RelativePart_Noscheme <$> parser pathNoschemeGrammar
-              , RelativePart_Empty <$ parser pathEmptyGrammar
-              ]
-        , generator =
-            QC.oneof
-              [ RelativePart_Authority <$> generator grammar <*> generator pathAbemptyGrammar
-              , RelativePart_Absolute <$> generator pathAbsoluteGrammar
-              , RelativePart_Noscheme <$> generator pathNoschemeGrammar
-              , RelativePart_Empty <$ generator pathEmptyGrammar
-              ]
-        }
-   where
-    r = \case
-      RelativePart_Authority a p → "//" <> render grammar a <> render pathAbemptyGrammar p
-      RelativePart_Absolute p → render pathAbsoluteGrammar p
-      RelativePart_Noscheme p → render pathNoschemeGrammar p
-      RelativePart_Empty → render pathEmptyGrammar ()
