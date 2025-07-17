@@ -220,3 +220,11 @@ list1Grammar Grammar {render, parser, generator} =
     }
  where
   f (x : xs) = x :| xs
+
+optionalGrammar ∷ Grammar a → Grammar (Maybe a)
+optionalGrammar Grammar {render, parser, generator} =
+  Grammar
+    { render = fmap (fold @Maybe) . traverse render
+    , parser = P.optional parser
+    , generator = QC.liftArbitrary generator
+    }

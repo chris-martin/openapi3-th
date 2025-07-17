@@ -63,30 +63,20 @@ data Authority = Authority
   , host ∷ Host
   , port ∷ Maybe ByteString
   }
-  deriving Arbitrary via TheGrammar Authority
+
+makeFieldLabels ''Authority
 
 instance HasGrammar Authority where
   grammar =
-    label
-      "authority"
-      Grammar
-        { render = r
-        , parser = do
-            userinfo ← P.optional $ P.try $ parser userinfoGrammar <* P.single (char '@')
-            host ← parser grammar
-            port ← P.optional $ P.single (char ':') *> parser portGrammar
-            pure Authority {userinfo, host, port}
-        , generator = do
-            userinfo ← liftArbitrary $ generator userinfoGrammar
-            host ← generator grammar
-            port ← liftArbitrary $ generator portGrammar
-            pure Authority {userinfo, host, port}
-        }
-   where
-    r x =
-      foldMap (\u → render userinfoGrammar u <> "@") x.userinfo
-        <> render grammar x.host
-        <> foldMap (\p → ":" <> render portGrammar p) x.port
+    label "authority"
+      $ isoGrammar
+        ( iso
+            (\Authority {userinfo, host, port} → userinfo :& host :& port)
+            (\(userinfo :& host :& port) → Authority {userinfo, host, port})
+        )
+      $ optionalGrammar (userinfoGrammar <+ constGrammar "@")
+        <+> grammar
+        <+> optionalGrammar (constGrammar ":" +> portGrammar)
 
 userinfoGrammar ∷ Grammar ByteString
 userinfoGrammar =
@@ -105,3 +95,8 @@ portGrammar =
   label "port" $
     isoGrammar (iso BS.unpack BS.pack) $
       listGrammar digitCharGrammar
+
+deriving via
+  TheGrammar Authority
+  instance
+    Arbitrary Authority
