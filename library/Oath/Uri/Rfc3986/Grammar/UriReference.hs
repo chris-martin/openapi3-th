@@ -1,51 +1,4 @@
--- | Very straightforward translation of ABNF from
---   <https://www.ietf.org/rfc/rfc3986.txt>
-module Oath.Uri.Rfc3986.Grammar (
-  Uri (..),
-  HierPart (..),
-  UriReference (..),
-  AbsoluteUri (..),
-  RelativeRef (..),
-  RelativePart (..),
-
-  -- * Scheme
-  schemeGrammar,
-
-  -- * Authority
-  Authority (..),
-  userinfoGrammar,
-  portGrammar,
-
-  -- * Host
-  Host (..),
-  IpLiteral (..),
-  IpvFuture (..),
-  ipv6AddressGrammar,
-  ipv4AddressGrammar,
-  regNameGrammar,
-
-  -- * Paths
-  pathAbemptyGrammar,
-  pathNoschemeGrammar,
-  pathRootlessGrammar,
-  pathEmptyGrammar,
-  segmentGrammar,
-  segmentNzGrammar,
-  segmentNzNcGrammar,
-
-  -- * Appendages
-  queryGrammar,
-  fragmentGrammar,
-
-  -- * Characters
-  pctEncodedGrammar,
-  unreservedGrammar,
-  reservedGrammar,
-  genDelimGrammar,
-  subDelimGrammar,
-  decOctetGrammar,
-  pcharGrammar,
-) where
+module Oath.Uri.Rfc3986.Grammar.UriReference where
 
 import Essentials
 
@@ -86,6 +39,7 @@ import GHC.Generics
 import Language.Haskell.TH.Quote
 import Language.Haskell.TH.Syntax
 import Numeric.Natural (Natural)
+import Optics
 import Optics.TH
 import Test.QuickCheck (Gen, liftArbitrary)
 import Test.QuickCheck qualified as QC
@@ -107,4 +61,23 @@ import Oath.Uri.Rfc3986.Grammar.RelativeRef
 import Oath.Uri.Rfc3986.Grammar.Scheme
 import Oath.Uri.Rfc3986.Grammar.Segment
 import Oath.Uri.Rfc3986.Grammar.Uri
-import Oath.Uri.Rfc3986.Grammar.UriReference
+
+-- | <https://www.rfc-editor.org/rfc/rfc3986#section-4.1>
+data UriReference
+  = UriReference_Uri Uri
+  | UriReference_RelativeRef RelativeRef
+
+makePrismLabels ''UriReference
+
+instance HasGrammar UriReference where
+  grammar =
+    label "URI-reference" $
+      grammarAlternatives
+        [ prismGrammar #_UriReference_Uri grammar
+        , prismGrammar #_UriReference_RelativeRef grammar
+        ]
+
+deriving via
+  TheGrammar UriReference
+  instance
+    Arbitrary UriReference
