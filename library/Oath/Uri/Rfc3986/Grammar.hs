@@ -95,78 +95,7 @@ import Oath.Uri.Rfc3986.Grammar.RelativeRef
 import Oath.Uri.Rfc3986.Grammar.Scheme
 import Oath.Uri.Rfc3986.Grammar.Segment
 
-data Uri = Uri
-  { scheme ∷ ByteString
-  , hierPart ∷ HierPart
-  , query ∷ Maybe ByteString
-  , fragment ∷ Maybe ByteString
-  }
-  deriving Arbitrary via TheGrammar Uri
-
-instance HasGrammar Uri where
-  grammar =
-    label
-      "URI"
-      Grammar
-        { render =
-            renderChoices
-              [ render schemeGrammar x.scheme
-              , ":"
-              , render grammar x.hierPart
-              , foldMap (\q → "?" <> render queryGrammar q) x.query
-              , foldMap (\f → "#" <> render fragmentGrammar f) x.fragment
-              ]
-        , parser = do
-            scheme ← parser schemeGrammar
-            P.single $ char ':'
-            hierPart ← parser grammar
-            query ← P.optional $ P.single (char '?') *> parser queryGrammar
-            fragment ← P.optional $ P.single (char '#') *> parser fragmentGrammar
-            pure Uri {scheme, hierPart, query, fragment}
-        , generator = do
-            scheme ← schemeGrammar.generator
-            hierPart ← generator grammar
-            query ← liftArbitrary queryGrammar.generator
-            fragment ← liftArbitrary fragmentGrammar.generator
-            pure Uri {scheme, hierPart, query, fragment}
-        }
-
-data HierPart
-  = HierPart_Authority Authority (Seq ByteString)
-  | HierPart_Absolute (Seq ByteString)
-  | HierPart_Rootless (NESeq ByteString)
-  | HierPart_Empty
-  deriving Arbitrary via TheGrammar HierPart
-
-instance HasGrammar HierPart where
-  grammar =
-    label
-      "hier-part"
-      Grammar
-        { render = r
-        , parser =
-            P.label "hier-part" $
-              asum @[]
-                [ P.chunk "//" *> (HierPart_Authority <$> parser grammar <*> parser pathAbemptyGrammar)
-                , HierPart_Absolute <$> parser pathAbsoluteGrammar
-                , HierPart_Rootless <$> parser pathRootlessGrammar
-                , HierPart_Empty <$ parser pathEmptyGrammar
-                ]
-        , generator =
-            QC.oneof
-              [ HierPart_Authority <$> generator grammar <*> generator pathAbemptyGrammar
-              , HierPart_Absolute <$> generator pathAbsoluteGrammar
-              , HierPart_Rootless <$> generator pathRootlessGrammar
-              , HierPart_Empty <$ generator pathEmptyGrammar
-              ]
-        }
-   where
-    r = \case
-      HierPart_Authority a p → "//" <> render grammar a <> render pathAbemptyGrammar p
-      HierPart_Absolute p → render pathAbsoluteGrammar p
-      HierPart_Rootless p → render pathRootlessGrammar p
-      HierPart_Empty → render pathEmptyGrammar ()
-
+-- | <https://www.rfc-editor.org/rfc/rfc3986#section-4.1>
 data UriReference
   = UriReference_Uri Uri
   | UriReference_RelativeRef RelativeRef
@@ -192,35 +121,3 @@ instance HasGrammar UriReference where
     r = \case
       UriReference_Uri x → render grammar x
       UriReference_RelativeRef x → render grammar x
-
-data AbsoluteUri = AbsoluteUri
-  { scheme ∷ ByteString
-  , hierPart ∷ HierPart
-  , query ∷ Maybe ByteString
-  }
-  deriving Arbitrary via TheGrammar AbsoluteUri
-
-instance HasGrammar AbsoluteUri where
-  grammar =
-    label
-      "absolute-uri"
-      Grammar
-        { render = r
-        , parser = do
-            scheme ← parser schemeGrammar
-            P.single $ char ':'
-            hierPart ← parser grammar
-            query ← P.optional $ P.single (char '?') *> parser queryGrammar
-            pure AbsoluteUri {scheme, hierPart, query}
-        , generator = do
-            scheme ← schemeGrammar.generator
-            hierPart ← generator grammar
-            query ← liftArbitrary $ generator queryGrammar
-            pure AbsoluteUri {scheme, hierPart, query}
-        }
-   where
-    r x =
-      render schemeGrammar x.scheme
-        <> ":"
-        <> render grammar x.hierPart
-        <> foldMap (\q → "?" <> render queryGrammar q) x.query
