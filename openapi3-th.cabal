@@ -100,8 +100,6 @@ library
     Oath.Uri.Rfc3986.Grammar.Uri
     Oath.Uri.Rfc3986.Grammar.UriReference
     Oath.Uri.Rfc3986.RelativeResolution
-    Oath.Web.JsonReference
-    Oath.Web.ResourceLocation
 
 test-suite test
   import:         base

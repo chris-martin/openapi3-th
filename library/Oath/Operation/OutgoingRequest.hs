@@ -12,8 +12,6 @@ import Data.Word (Word16)
 import Optics
 import System.IO (IO)
 
-import Oath.Web
-
 -- | Intermediate representation of a request header to be turned into
 --   an HTTP message
 data OutgoingRequest = OutgoingRequest
