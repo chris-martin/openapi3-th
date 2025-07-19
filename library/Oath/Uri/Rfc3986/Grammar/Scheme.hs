@@ -1,4 +1,6 @@
-module Oath.Uri.Rfc3986.Authority where
+module Oath.Uri.Rfc3986.Grammar.Scheme (
+  schemeGrammar,
+) where
 
 import Essentials
 
@@ -52,51 +54,22 @@ import Prelude (fromIntegral, (*), (+), (-))
 
 import Oath.Abnf.Rfc2234
 import Oath.Grammar
-import Oath.Uri.Rfc3986.Appendages
-import Oath.Uri.Rfc3986.Characters
-import Oath.Uri.Rfc3986.Host
-import Oath.Uri.Rfc3986.Scheme
-import Oath.Uri.Rfc3986.Segment
+import Oath.Uri.Rfc3986.Grammar.Characters
+import Oath.Uri.Rfc3986.Grammar.Host
 
-data Authority = Authority
-  { userinfo ∷ Maybe ByteString
-  , host ∷ Host
-  , port ∷ Maybe ByteString
-  }
-
-makeFieldLabels ''Authority
-
-instance HasGrammar Authority where
-  grammar =
-    label "authority"
-      $ isoGrammar
-        ( iso
-            (\Authority {userinfo, host, port} → userinfo :& host :& port)
-            (\(userinfo :& host :& port) → Authority {userinfo, host, port})
+schemeGrammar ∷ Grammar ByteString
+schemeGrammar =
+  label "scheme"
+    $ prismGrammar
+      ( prism'
+          (\(x :& xs) → BS.pack $ x : xs)
+          (fmap (\(x, xs) → x :& BS.unpack xs) . BS.uncons)
+      )
+    $ alphaGrammar
+      <+> listGrammar
+        ( grammarAlternatives
+            [ alphaGrammar
+            , digitCharGrammar
+            , tokenEnumeration $ char <$> "+-."
+            ]
         )
-      $ optionalGrammar (userinfoGrammar <+ constGrammar "@")
-        <+> grammar
-        <+> optionalGrammar (constGrammar ":" +> portGrammar)
-
-userinfoGrammar ∷ Grammar ByteString
-userinfoGrammar =
-  label "userinfo" $
-    isoGrammar (iso BS.unpack BS.pack) $
-      listGrammar $
-        grammarAlternatives
-          [ unreservedGrammar
-          , pctEncodedGrammar
-          , subDelimGrammar
-          , tokenEnumeration $ char <$> ":"
-          ]
-
-portGrammar ∷ Grammar ByteString
-portGrammar =
-  label "port" $
-    isoGrammar (iso BS.unpack BS.pack) $
-      listGrammar digitCharGrammar
-
-deriving via
-  TheGrammar Authority
-  instance
-    Arbitrary Authority

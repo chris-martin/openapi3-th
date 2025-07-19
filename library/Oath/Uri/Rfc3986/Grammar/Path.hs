@@ -1,4 +1,4 @@
-module Oath.Uri.Rfc3986.Characters where
+module Oath.Uri.Rfc3986.Grammar.Path where
 
 import Essentials
 
@@ -39,6 +39,7 @@ import GHC.Generics
 import Language.Haskell.TH.Quote
 import Language.Haskell.TH.Syntax
 import Numeric.Natural (Natural)
+import Optics hiding (Empty)
 import Optics.TH
 import Test.QuickCheck (Gen, liftArbitrary)
 import Test.QuickCheck qualified as QC
@@ -51,50 +52,53 @@ import Prelude (fromIntegral, (*), (+), (-))
 
 import Oath.Abnf.Rfc2234
 import Oath.Grammar
-import Optics
+import Oath.Uri.Rfc3986.Grammar.Appendages
+import Oath.Uri.Rfc3986.Grammar.Authority
+import Oath.Uri.Rfc3986.Grammar.Characters
+import Oath.Uri.Rfc3986.Grammar.Host
+import Oath.Uri.Rfc3986.Grammar.Scheme
+import Oath.Uri.Rfc3986.Grammar.Segment
 
-pcharGrammar ∷ Grammar Word8
-pcharGrammar =
-  label "pchar" $
-    grammarAlternatives
-      [ unreservedGrammar
-      , subDelimGrammar
-      , tokenEnumeration $ char <$> ":@"
-      , pctEncodedGrammar
-      ]
+pathAbemptyGrammar ∷ Grammar (Seq ByteString)
+pathAbemptyGrammar =
+  label "path-abempty" $
+    seqGrammar $
+      constGrammar "/" +> segmentGrammar
 
-pctEncodedGrammar ∷ Grammar Word8
-pctEncodedGrammar =
-  label "pct-encoded"
+pathAbsoluteGrammar ∷ Grammar (Seq ByteString)
+pathAbsoluteGrammar =
+  label "path-absolute"
     $ isoGrammar
       ( iso
-          (\x → (x `shiftR` 4) :& (x .&. 15))
-          (\(a :& b) → (a `shiftL` 4) + b)
+          (\case Empty → Nothing; x :<| xs → Just (x :& xs))
+          (\case Nothing → Empty; Just (x :& xs) → x :<| xs)
       )
-    $ constGrammar "%"
-      +> hexdigNumGrammar UpperCase
-      <+> hexdigNumGrammar UpperCase
+    $ constGrammar "/"
+      +> optionalGrammar
+        ( segmentNzGrammar <+> seqGrammar (constGrammar "/" +> segmentGrammar)
+        )
 
-unreservedGrammar ∷ Grammar Word8
-unreservedGrammar =
-  label "unreserved" $
-    grammarAlternatives
-      [ alphaGrammar
-      , digitCharGrammar
-      , tokenEnumeration $ char <$> "-._~"
-      ]
+pathNoschemeGrammar ∷ Grammar (NESeq ByteString)
+pathNoschemeGrammar =
+  label "path-noscheme"
+    $ isoGrammar
+      ( iso
+          (\(x :<|| xs) → x :& xs)
+          (\(x :& xs) → x :<|| xs)
+      )
+    $ segmentNzNcGrammar
+      <+> seqGrammar (constGrammar "/" +> segmentGrammar)
 
-reservedGrammar ∷ Grammar Word8
-reservedGrammar = label "reserved" $ tokenEnumeration $ genDelims <> subDelims
+pathRootlessGrammar ∷ Grammar (NESeq ByteString)
+pathRootlessGrammar =
+  label "path-rootless"
+    $ isoGrammar
+      ( iso
+          (\(x :<|| xs) → x :& xs)
+          (\(x :& xs) → x :<|| xs)
+      )
+    $ segmentNzGrammar
+      <+> seqGrammar (constGrammar "/" +> segmentGrammar)
 
-genDelimGrammar ∷ Grammar Word8
-genDelimGrammar = label "gen-delims" $ tokenEnumeration genDelims
-
-genDelims ∷ [Word8]
-genDelims = char <$> ":/?#[]@"
-
-subDelimGrammar ∷ Grammar Word8
-subDelimGrammar = label "sub-delims" $ tokenEnumeration subDelims
-
-subDelims ∷ [Word8]
-subDelims = char <$> "!$&'()*+,;="
+pathEmptyGrammar ∷ Grammar ()
+pathEmptyGrammar = emptyGrammar

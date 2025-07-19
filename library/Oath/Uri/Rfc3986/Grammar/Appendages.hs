@@ -1,13 +1,10 @@
-module Oath.Uri.Rfc3986.Segment (
-  segmentGrammar,
-  segmentNzGrammar,
-  segmentNzNcGrammar,
-) where
+-- | Note that "appendage" is not a term from the RFC.
+module Oath.Uri.Rfc3986.Grammar.Appendages where
 
 import Essentials
 
 import Control.Applicative (Alternative (..), asum, liftA2)
-import Control.Monad (guard, mfilter, replicateM, replicateM_, sequence, unless)
+import Control.Monad (mfilter, replicateM, replicateM_, sequence, unless)
 import Control.Monad.Fail
 import Control.Monad.Validate
 import Data.Bifunctor (first)
@@ -21,7 +18,7 @@ import Data.ByteString.Lazy qualified as BSL
 import Data.Char (Char)
 import Data.Char qualified as Char
 import Data.Either (Either (..), either)
-import Data.Foldable (fold, foldMap, foldl', toList)
+import Data.Foldable (fold, foldMap, foldl')
 import Data.Function (const)
 import Data.List qualified as List
 import Data.List.NonEmpty (NonEmpty ((:|)), nonEmpty)
@@ -56,30 +53,19 @@ import Prelude (fromIntegral, (*), (+), (-))
 
 import Oath.Abnf.Rfc2234
 import Oath.Grammar
-import Oath.Uri.Rfc3986.Characters
-import Oath.Uri.Rfc3986.Host
-import Oath.Uri.Rfc3986.Scheme
+import Oath.Uri.Rfc3986.Grammar.Characters
 
-segmentGrammar ∷ Grammar ByteString
-segmentGrammar =
-  label "segment" $
-    isoGrammar (iso BS.unpack BS.pack) $
-      listGrammar pcharGrammar
+queryGrammar ∷ Grammar ByteString
+queryGrammar = label "query" appendageGrammar
 
-segmentNzGrammar ∷ Grammar ByteString
-segmentNzGrammar =
-  label "segment-nz" $
-    prismGrammar (prism' (BS.pack . toList) (nonEmpty . BS.unpack)) $
-      list1Grammar pcharGrammar
+fragmentGrammar ∷ Grammar ByteString
+fragmentGrammar = label "fragment" appendageGrammar
 
-segmentNzNcGrammar ∷ Grammar ByteString
-segmentNzNcGrammar =
-  label "segment-nz-nc" $
-    prismGrammar (prism' (BS.pack . toList) (nonEmpty . BS.unpack)) $
-      list1Grammar $
-        grammarAlternatives
-          [ unreservedGrammar
-          , subDelimGrammar
-          , tokenEnumeration $ char <$> "@"
-          , pctEncodedGrammar
-          ]
+appendageGrammar ∷ Grammar ByteString
+appendageGrammar =
+  isoGrammar (iso BS.unpack BS.pack) $
+    listGrammar $
+      grammarAlternatives
+        [ pcharGrammar
+        , tokenEnumeration $ char <$> "/?"
+        ]

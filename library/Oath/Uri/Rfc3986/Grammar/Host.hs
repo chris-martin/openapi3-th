@@ -1,4 +1,4 @@
-module Oath.Uri.Rfc3986.Host where
+module Oath.Uri.Rfc3986.Grammar.Host where
 
 import Essentials
 
@@ -52,7 +52,7 @@ import Prelude (fromIntegral, (*), (+), (-))
 
 import Oath.Abnf.Rfc2234
 import Oath.Grammar
-import Oath.Uri.Rfc3986.Characters
+import Oath.Uri.Rfc3986.Grammar.Characters
 
 data Host
   = Host_IpLiteral IpLiteral

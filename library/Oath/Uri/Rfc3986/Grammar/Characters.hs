@@ -1,6 +1,4 @@
-module Oath.Uri.Rfc3986.Scheme (
-  schemeGrammar,
-) where
+module Oath.Uri.Rfc3986.Grammar.Characters where
 
 import Essentials
 
@@ -41,7 +39,6 @@ import GHC.Generics
 import Language.Haskell.TH.Quote
 import Language.Haskell.TH.Syntax
 import Numeric.Natural (Natural)
-import Optics
 import Optics.TH
 import Test.QuickCheck (Gen, liftArbitrary)
 import Test.QuickCheck qualified as QC
@@ -54,22 +51,50 @@ import Prelude (fromIntegral, (*), (+), (-))
 
 import Oath.Abnf.Rfc2234
 import Oath.Grammar
-import Oath.Uri.Rfc3986.Characters
-import Oath.Uri.Rfc3986.Host
+import Optics
 
-schemeGrammar ∷ Grammar ByteString
-schemeGrammar =
-  label "scheme"
-    $ prismGrammar
-      ( prism'
-          (\(x :& xs) → BS.pack $ x : xs)
-          (fmap (\(x, xs) → x :& BS.unpack xs) . BS.uncons)
+pcharGrammar ∷ Grammar Word8
+pcharGrammar =
+  label "pchar" $
+    grammarAlternatives
+      [ unreservedGrammar
+      , subDelimGrammar
+      , tokenEnumeration $ char <$> ":@"
+      , pctEncodedGrammar
+      ]
+
+pctEncodedGrammar ∷ Grammar Word8
+pctEncodedGrammar =
+  label "pct-encoded"
+    $ isoGrammar
+      ( iso
+          (\x → (x `shiftR` 4) :& (x .&. 15))
+          (\(a :& b) → (a `shiftL` 4) + b)
       )
-    $ alphaGrammar
-      <+> listGrammar
-        ( grammarAlternatives
-            [ alphaGrammar
-            , digitCharGrammar
-            , tokenEnumeration $ char <$> "+-."
-            ]
-        )
+    $ constGrammar "%"
+      +> hexdigNumGrammar UpperCase
+      <+> hexdigNumGrammar UpperCase
+
+unreservedGrammar ∷ Grammar Word8
+unreservedGrammar =
+  label "unreserved" $
+    grammarAlternatives
+      [ alphaGrammar
+      , digitCharGrammar
+      , tokenEnumeration $ char <$> "-._~"
+      ]
+
+reservedGrammar ∷ Grammar Word8
+reservedGrammar = label "reserved" $ tokenEnumeration $ genDelims <> subDelims
+
+genDelimGrammar ∷ Grammar Word8
+genDelimGrammar = label "gen-delims" $ tokenEnumeration genDelims
+
+genDelims ∷ [Word8]
+genDelims = char <$> ":/?#[]@"
+
+subDelimGrammar ∷ Grammar Word8
+subDelimGrammar = label "sub-delims" $ tokenEnumeration subDelims
+
+subDelims ∷ [Word8]
+subDelims = char <$> "!$&'()*+,;="

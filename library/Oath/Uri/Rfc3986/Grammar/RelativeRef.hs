@@ -1,4 +1,4 @@
-module Oath.Uri.Rfc3986.RelativeRef where
+module Oath.Uri.Rfc3986.Grammar.RelativeRef where
 
 import Essentials
 
@@ -52,13 +52,13 @@ import Prelude (fromIntegral, (*), (+), (-))
 
 import Oath.Abnf.Rfc2234
 import Oath.Grammar
-import Oath.Uri.Rfc3986.Appendages
-import Oath.Uri.Rfc3986.Authority
-import Oath.Uri.Rfc3986.Characters
-import Oath.Uri.Rfc3986.Host
-import Oath.Uri.Rfc3986.Path
-import Oath.Uri.Rfc3986.Scheme
-import Oath.Uri.Rfc3986.Segment
+import Oath.Uri.Rfc3986.Grammar.Appendages
+import Oath.Uri.Rfc3986.Grammar.Authority
+import Oath.Uri.Rfc3986.Grammar.Characters
+import Oath.Uri.Rfc3986.Grammar.Host
+import Oath.Uri.Rfc3986.Grammar.Path
+import Oath.Uri.Rfc3986.Grammar.Scheme
+import Oath.Uri.Rfc3986.Grammar.Segment
 
 data RelativeRef = RelativeRef
   { relativePart ∷ RelativePart
