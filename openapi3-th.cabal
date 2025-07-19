@@ -99,8 +99,10 @@ library
     Oath.Uri.Rfc3986.Grammar.Segment
     Oath.Uri.Rfc3986.Grammar.Uri
     Oath.Uri.Rfc3986.Grammar.UriReference
+    Oath.Uri.Rfc3986.HierPart
     Oath.Uri.Rfc3986.Path
     Oath.Uri.Rfc3986.RelativeResolution
+    Oath.Uri.Rfc3986.Uri
 
 test-suite test
   import:         base

@@ -2,32 +2,28 @@ module Oath.Uri.Rfc3986.Path where
 
 import Essentials
 
-import Control.Applicative ((<|>))
 import Data.ByteString (ByteString)
-import Data.Either (Either (..))
-import Data.Foldable (toList)
 import Data.Sequence (Seq (..))
-import Data.Sequence.NonEmpty (NESeq)
-import Data.Sequence.NonEmpty qualified as NESeq
-import Data.Text (Text)
 
-import Oath.Uri.Rfc3986.Grammar (AbsoluteUri (..), Authority (..))
-import Oath.Uri.Rfc3986.Grammar qualified as G
+data Path = Path
+  { base ∷ PathBase
+  , segments ∷ Seq ByteString
+  }
 
-data Path = Path {root ∷ PathRoot, segments ∷ Seq ByteString}
-
-data PathRoot = PathRelative | PathAbsolute
+data PathBase
+  = PathRelative
+  | PathAbsolute
 
 -- | <https://www.rfc-editor.org/rfc/rfc3986#section-5.2.3> sort of
 instance Semigroup Path where
-  _ <> x@Path {root = PathAbsolute} = x
-  Path {root, segments = Empty} <> Path {segments} =
-    Path {root, segments}
-  Path {root, segments = base :|> _} <> Path {segments = r} =
-    Path {root, segments = base <> r}
+  _ <> x@Path {base = PathAbsolute} = x
+  Path {base, segments = Empty} <> Path {segments} =
+    Path {base, segments}
+  Path {base, segments = b :|> _} <> Path {segments = r} =
+    Path {base, segments = b <> r}
 
 instance Monoid Path where
-  mempty = Path PathRelative Empty
+  mempty = Path {base = PathRelative, segments = Empty}
 
 -- | <https://www.rfc-editor.org/rfc/rfc3986#section-5.2.4>
 removeDotSegments ∷ Path → Path

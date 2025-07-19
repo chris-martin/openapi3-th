@@ -21,15 +21,7 @@ import Data.Text (Text)
 
 import Oath.Uri.Rfc3986.Grammar (AbsoluteUri (..), Authority (..))
 import Oath.Uri.Rfc3986.Grammar qualified as G
-import Oath.Uri.Rfc3986.Path qualified as G
-
-data Uri = Uri
-  { scheme ∷ ByteString
-  , authority ∷ Maybe Authority
-  , path ∷ Path
-  , query ∷ Maybe ByteString
-  , fragment ∷ Maybe ByteString
-  }
+import Oath.Uri.Rfc3986.Path
 
 data BaseUri = BaseUri
   { scheme ∷ ByteString
@@ -65,35 +57,10 @@ uriReferenceFromGrammar = \case
     scheme = Nothing
     (authority, path) = fromRelativePart x.relativePart
 
-uriToGrammar ∷ Uri → Either InvalidHierPart G.Uri
+uriToGrammar ∷ Uri → Either InvalidUri G.Uri
 uriToGrammar x@Uri {scheme, query, fragment} = do
   hierPart ← toHierPart (x.authority, x.path)
   pure G.Uri {scheme, hierPart, query, fragment}
-
-toHierPart
-  ∷ (Maybe Authority, Path)
-  → Either InvalidHierPart G.HierPart
-toHierPart = \case
-  (Just a, Path PathAbsolute p) → pure $ G.HierPart_Authority a p
-  (Just {}, Path PathRelative _) → Left AuthorityWithRelativePath
-  (Nothing, Path PathAbsolute p) → _
-  (Nothing, Path PathRelative p) → _
-
-data InvalidHierPart = AuthorityWithRelativePath
-
-fromHierPart ∷ G.HierPart → (Maybe Authority, Path)
-fromHierPart = \case
-  G.HierPart_Authority a p → (Just a, Path PathAbsolute p)
-  G.HierPart_Absolute p → (Nothing, Path PathAbsolute p)
-  G.HierPart_Rootless p → (Nothing, Path PathRelative $ NESeq.toSeq p)
-  G.HierPart_Empty → (Nothing, Path PathRelative [])
-
-fromRelativePart ∷ G.RelativePart → (Maybe Authority, Path)
-fromRelativePart = \case
-  G.RelativePart_Authority a p → (Just a, Path PathAbsolute p)
-  G.RelativePart_Absolute p → (Nothing, Path PathAbsolute p)
-  G.RelativePart_Noscheme p → (Nothing, Path PathRelative $ NESeq.toSeq p)
-  G.RelativePart_Empty → (Nothing, Path PathRelative [])
 
 -- | Section 5.2.2, Transform References
 resolveUriReference ∷ BaseUri → UriReference → Uri
