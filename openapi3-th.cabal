@@ -99,6 +99,7 @@ library
     Oath.Uri.Rfc3986.Grammar.Segment
     Oath.Uri.Rfc3986.Grammar.Uri
     Oath.Uri.Rfc3986.Grammar.UriReference
+    Oath.Uri.Rfc3986.Path
     Oath.Uri.Rfc3986.RelativeResolution
 
 test-suite test

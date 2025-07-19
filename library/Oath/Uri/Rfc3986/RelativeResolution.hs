@@ -21,6 +21,15 @@ import Data.Text (Text)
 
 import Oath.Uri.Rfc3986.Grammar (AbsoluteUri (..), Authority (..))
 import Oath.Uri.Rfc3986.Grammar qualified as G
+import Oath.Uri.Rfc3986.Path qualified as G
+
+data Uri = Uri
+  { scheme ∷ ByteString
+  , authority ∷ Maybe Authority
+  , path ∷ Path
+  , query ∷ Maybe ByteString
+  , fragment ∷ Maybe ByteString
+  }
 
 data BaseUri = BaseUri
   { scheme ∷ ByteString
@@ -29,12 +38,6 @@ data BaseUri = BaseUri
   , query ∷ Maybe ByteString
   }
 
-baseUriFromGrammar ∷ AbsoluteUri → BaseUri
-baseUriFromGrammar x@AbsoluteUri {scheme, query} =
-  BaseUri {scheme, query, authority, path}
- where
-  (authority, path) = fromHierPart x.hierPart
-
 data UriReference = UriReference
   { scheme ∷ Maybe ByteString
   , authority ∷ Maybe Authority
@@ -42,6 +45,12 @@ data UriReference = UriReference
   , query ∷ Maybe ByteString
   , fragment ∷ Maybe ByteString
   }
+
+baseUriFromGrammar ∷ AbsoluteUri → BaseUri
+baseUriFromGrammar x@AbsoluteUri {scheme, query} =
+  BaseUri {scheme, query, authority, path}
+ where
+  (authority, path) = fromHierPart x.hierPart
 
 uriReferenceFromGrammar ∷ G.UriReference → UriReference
 uriReferenceFromGrammar = \case
@@ -55,18 +64,6 @@ uriReferenceFromGrammar = \case
    where
     scheme = Nothing
     (authority, path) = fromRelativePart x.relativePart
-
-data PathRoot = PathRelative | PathAbsolute
-
-data Path = Path {root ∷ PathRoot, segments ∷ Seq ByteString}
-
-data Uri = Uri
-  { scheme ∷ ByteString
-  , authority ∷ Maybe Authority
-  , path ∷ Path
-  , query ∷ Maybe ByteString
-  , fragment ∷ Maybe ByteString
-  }
 
 uriToGrammar ∷ Uri → Either InvalidHierPart G.Uri
 uriToGrammar x@Uri {scheme, query, fragment} = do
@@ -133,25 +130,3 @@ resolveUriReference base r
         , query = r.query
         , fragment = r.fragment
         }
-
--- | Section 5.2.3, Merge Paths, sort of
-instance Semigroup Path where
-  _ <> x@Path {root = PathAbsolute} = x
-  Path {root, segments = Empty} <> Path {segments} =
-    Path {root, segments}
-  Path {root, segments = base :|> _} <> Path {segments = r} =
-    Path {root, segments = base <> r}
-
-instance Monoid Path where
-  mempty = Path PathRelative Empty
-
--- | Section 5.2.4, Remove Dot Segments
-removeDotSegments ∷ Path → Path
-removeDotSegments p = p {segments = go Empty p.segments}
- where
-  go t = \case
-    Empty → t
-    Empty :|> ".." → t
-    xs :|> "." → go t xs
-    xs :|> _ :|> ".." → go t xs
-    xs :|> x → go (x :<| t) xs
