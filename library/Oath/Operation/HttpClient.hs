@@ -8,6 +8,7 @@ import Control.Applicative (empty)
 import Control.Monad.Fail
 import Control.Monad.Validate (refute, runValidateT)
 import Control.Monad.Yield
+import Data.Bits (toIntegralSized)
 import Data.ByteString (ByteString, StrictByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString qualified as BSL
@@ -19,6 +20,7 @@ import Data.Conduit.Internal (ConduitT (..), Pipe (..))
 import Data.Either (either)
 import Data.Foldable (concat, fold, toList)
 import Data.List qualified as List
+import Data.Sequence (Seq)
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
@@ -34,8 +36,6 @@ import Test.Hspec
 import Text.Show (show)
 import Prelude (fromIntegral)
 
-import Data.Bits (toIntegralSized)
-import Data.Sequence (Seq)
 import Oath.OpenApi
 import Oath.Operation.IncomingRequest
 import Oath.Operation.IncomingResponse

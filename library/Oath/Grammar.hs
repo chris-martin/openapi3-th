@@ -2,53 +2,26 @@ module Oath.Grammar where
 
 import Essentials
 
-import Control.Applicative (Alternative (..), asum, empty, liftA2)
-import Control.Monad (guard, mfilter, replicateM, replicateM_, sequence, unless)
-import Control.Monad.Fail
-import Control.Monad.Validate
-import Data.Bifunctor (first)
-import Data.Bool (not, (&&), (||))
+import Control.Applicative (asum, liftA2)
+import Control.Monad (guard)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.Builder (Builder)
 import Data.ByteString.Builder qualified as BSB
 import Data.ByteString.Lazy qualified as BSL
-import Data.Char (Char)
-import Data.Char qualified as Char
-import Data.Coerce
-import Data.Either (Either (..), either)
 import Data.Foldable (fold, toList)
-import Data.Function (const)
 import Data.List qualified as List
 import Data.List.NonEmpty (NonEmpty ((:|)), nonEmpty)
 import Data.Maybe (mapMaybe)
-import Data.Proxy
 import Data.Sequence (Seq (..))
 import Data.Sequence qualified as Seq
-import Data.String (IsString (..))
-import Data.Text (Text)
-import Data.Text qualified as Text
-import Data.Text.Encoding qualified as Text
-import Data.Text.Lazy qualified as TL
-import Data.Text.Lazy.Builder qualified as TB
-import Data.Tuple
-import Data.Vector qualified as V
 import Data.Word
-import GHC.Generics
-import GHC.TypeLits
-import Language.Haskell.TH.Quote
-import Language.Haskell.TH.Syntax
-import Numeric.Natural (Natural)
 import Optics
-import Optics.TH
 import Test.QuickCheck (Gen)
 import Test.QuickCheck qualified as QC
-import Test.QuickCheck.Arbitrary.Generic
 import Text.Megaparsec (Parsec)
 import Text.Megaparsec qualified as P
-import Text.Megaparsec.Byte.Lexer qualified as P
-import Text.Show (show)
-import Prelude (String, error, fromIntegral)
+import Prelude (String, error)
 
 infixl 2 :&
 infixl 4 <+>
@@ -115,14 +88,6 @@ renderChoices xs x = do
       { canonical = o.canonical
       , generator = QC.oneof $ fmap (.generator) $ toList os
       }
-
-class HasGrammar a where
-  grammar ∷ Grammar a
-
-newtype TheGrammar a = TheGrammar a
-
-instance HasGrammar a ⇒ Arbitrary (TheGrammar a) where
-  arbitrary = TheGrammar <$> grammar.generator
 
 render ∷ Grammar a → a → Maybe Render
 render = (.render)

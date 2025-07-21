@@ -1,4 +1,4 @@
-module Oath.Uri.Rfc3986.Grammar.Scheme (
+module Oath.Uri.Scheme (
   schemeGrammar,
 ) where
 
@@ -8,7 +8,7 @@ import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Optics
 
-import Oath.Abnf.Rfc2234
+import Oath.Abnf
 import Oath.Grammar
 
 schemeGrammar ∷ Grammar ByteString

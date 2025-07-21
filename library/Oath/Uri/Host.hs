@@ -1,4 +1,4 @@
-module Oath.Uri.Rfc3986.Grammar.Host where
+module Oath.Uri.Host where
 
 import Essentials
 
@@ -22,9 +22,9 @@ import Test.QuickCheck.Arbitrary.Generic
 import Text.Megaparsec qualified as P
 import Prelude (fromIntegral, (*), (+))
 
-import Oath.Abnf.Rfc2234
+import Oath.Abnf
 import Oath.Grammar
-import Oath.Uri.Rfc3986.Grammar.Characters
+import Oath.Uri.Characters
 
 data Host
   = Host_IpLiteral IpLiteral
@@ -45,42 +45,42 @@ makePrismLabels ''Host
 makePrismLabels ''IpLiteral
 makeFieldLabels ''IpvFuture
 
-instance HasGrammar Host where
-  grammar =
-    label "host" $
-      grammarAlternatives
-        [ prismGrammar #_Host_IpLiteral grammar
-        , prismGrammar #_Host_Ipv4 ipv4AddressGrammar
-        , prismGrammar #_Host_RegName regNameGrammar
-        ]
+hostGrammar ∷ Grammar Host
+hostGrammar =
+  label "host" $
+    grammarAlternatives
+      [ prismGrammar #_Host_IpLiteral ipLiteralGrammar
+      , prismGrammar #_Host_Ipv4 ipv4AddressGrammar
+      , prismGrammar #_Host_RegName regNameGrammar
+      ]
 
-instance HasGrammar IpLiteral where
-  grammar =
-    label "IP-literal" $
-      grammarAlternatives
-        [ prismGrammar #_IpLiteral_V6 $
-            bracketGrammar "[" "]" ipv6AddressGrammar
-        , prismGrammar #_IpLiteral_Future grammar
-        ]
+ipLiteralGrammar ∷ Grammar IpLiteral
+ipLiteralGrammar =
+  label "IP-literal" $
+    grammarAlternatives
+      [ prismGrammar #_IpLiteral_V6 $
+          bracketGrammar "[" "]" ipv6AddressGrammar
+      , prismGrammar #_IpLiteral_Future ipvFutureGrammar
+      ]
 
-instance HasGrammar IpvFuture where
-  grammar =
-    label "IPvFuture"
-      $ isoGrammar
-        ( iso
-            (\IpvFuture {version, address} → version :& address)
-            (\(version :& address) → IpvFuture {version, address})
+ipvFutureGrammar ∷ Grammar IpvFuture
+ipvFutureGrammar =
+  label "IPvFuture"
+    $ isoGrammar
+      ( iso
+          (\IpvFuture {version, address} → version :& address)
+          (\(version :& address) → IpvFuture {version, address})
+      )
+    $ (constGrammar "v" +> hexdigCharGrammar UpperCase <+ constGrammar ".")
+      <+> isoGrammar
+        (iso BS.unpack BS.pack)
+        ( listGrammar $
+            grammarAlternatives
+              [ unreservedGrammar
+              , subDelimGrammar
+              , tokenEnumeration (char <$> ":")
+              ]
         )
-      $ (constGrammar "v" +> hexdigCharGrammar UpperCase <+ constGrammar ".")
-        <+> isoGrammar
-          (iso BS.unpack BS.pack)
-          ( listGrammar $
-              grammarAlternatives
-                [ unreservedGrammar
-                , subDelimGrammar
-                , tokenEnumeration (char <$> ":")
-                ]
-          )
 
 -- | Parsing is much more lenient than the spec out of laziness, could be improved
 ipv6AddressGrammar ∷ Grammar ByteString
@@ -168,17 +168,11 @@ regNameGrammar =
           , pctEncodedGrammar
           ]
 
-deriving via
-  TheGrammar Host
-  instance
-    Arbitrary Host
+instance Arbitrary Host where
+  arbitrary = hostGrammar.generator
 
-deriving via
-  TheGrammar IpLiteral
-  instance
-    Arbitrary IpLiteral
+instance Arbitrary IpLiteral where
+  arbitrary = ipLiteralGrammar.generator
 
-deriving via
-  TheGrammar IpvFuture
-  instance
-    Arbitrary IpvFuture
+instance Arbitrary IpvFuture where
+  arbitrary = ipvFutureGrammar.generator

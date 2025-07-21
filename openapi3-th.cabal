@@ -51,6 +51,7 @@ library
     , mtl
     , nonempty-containers
     , optics
+    , optics-core
     , quaalude
     , QuickCheck
     , template-haskell
@@ -68,12 +69,12 @@ library
   -- cabal-fmt: expand library
   exposed-modules:
     Oath
-    Oath.Abnf.Rfc2234
-    Oath.BasicAuth.Rfc7617
+    Oath.Abnf
+    Oath.BasicAuth
     Oath.Declare.Declare
     Oath.Declare.Options
     Oath.Grammar
-    Oath.JsonPointer.Rfc6901
+    Oath.JsonPointer
     Oath.OpenApi
     Oath.OpenApi.DataType
     Oath.OpenApi.ReadSpecFile
@@ -88,21 +89,20 @@ library
     Oath.Operation.Testing
     Oath.Operation.Wai
     Oath.Relation
-    Oath.Uri.Rfc3986.Grammar
-    Oath.Uri.Rfc3986.Grammar.Appendages
-    Oath.Uri.Rfc3986.Grammar.Authority
-    Oath.Uri.Rfc3986.Grammar.Characters
-    Oath.Uri.Rfc3986.Grammar.Host
-    Oath.Uri.Rfc3986.Grammar.Path
-    Oath.Uri.Rfc3986.Grammar.RelativeRef
-    Oath.Uri.Rfc3986.Grammar.Scheme
-    Oath.Uri.Rfc3986.Grammar.Segment
-    Oath.Uri.Rfc3986.Grammar.Uri
-    Oath.Uri.Rfc3986.Grammar.UriReference
-    Oath.Uri.Rfc3986.HierPart
-    Oath.Uri.Rfc3986.Path
-    Oath.Uri.Rfc3986.RelativeResolution
-    Oath.Uri.Rfc3986.Uri
+    Oath.Uri
+    Oath.Uri.AbsoluteUri
+    Oath.Uri.Appendages
+    Oath.Uri.Authority
+    Oath.Uri.Characters
+    Oath.Uri.HierPart
+    Oath.Uri.Host
+    Oath.Uri.Path
+    Oath.Uri.RelativeRef
+    Oath.Uri.RelativeResolution
+    Oath.Uri.Scheme
+    Oath.Uri.Segment
+    Oath.Uri.Uri
+    Oath.Uri.UriReference
 
 test-suite test
   import:         base

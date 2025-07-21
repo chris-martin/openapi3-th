@@ -1,0 +1,42 @@
+module Oath.Uri.AbsoluteUri where
+
+import Essentials
+
+import Data.ByteString (ByteString)
+import Optics
+import Test.QuickCheck (Arbitrary (..))
+
+import Oath.Grammar
+import Oath.Uri.Appendages
+import Oath.Uri.HierPart
+import Oath.Uri.Scheme
+
+-- | 'Uri' without a fragment
+--
+-- <https://www.rfc-editor.org/rfc/rfc3986#section-4.3>
+data AbsoluteUri = AbsoluteUri
+  { scheme ∷ ByteString
+  , hierPart ∷ HierPart
+  , query ∷ Maybe ByteString
+  }
+
+makeFieldLabels ''AbsoluteUri
+
+absoluteUriGrammar ∷ Grammar AbsoluteUri
+absoluteUriGrammar =
+  label "absolute-uri"
+    $ isoGrammar
+      ( iso
+          ( \AbsoluteUri {scheme, hierPart, query} →
+              scheme :& hierPart :& query
+          )
+          ( \(scheme :& hierPart :& query) →
+              AbsoluteUri {scheme, hierPart, query}
+          )
+      )
+    $ (schemeGrammar <+ constGrammar ":")
+      <+> hierPartGrammar
+      <+> optionalGrammar (constGrammar "?" +> queryGrammar)
+
+instance Arbitrary AbsoluteUri where
+  arbitrary = absoluteUriGrammar.generator

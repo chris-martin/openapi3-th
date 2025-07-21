@@ -1,4 +1,4 @@
-module Oath.Uri.Rfc3986.Grammar.Segment (
+module Oath.Uri.Segment (
   segmentGrammar,
   segmentNzGrammar,
   segmentNzNcGrammar,
@@ -12,9 +12,9 @@ import Data.Foldable (toList)
 import Data.List.NonEmpty (nonEmpty)
 import Optics
 
-import Oath.Abnf.Rfc2234
+import Oath.Abnf
 import Oath.Grammar
-import Oath.Uri.Rfc3986.Grammar.Characters
+import Oath.Uri.Characters
 
 segmentGrammar ∷ Grammar ByteString
 segmentGrammar =

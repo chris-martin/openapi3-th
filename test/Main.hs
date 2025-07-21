@@ -1,12 +1,10 @@
 module Main (main) where
 
-import Prelude
-
-import Test.Hspec
-
 import OpenApiGuide.BasicStructure.Main qualified
 import OpenApiGuide.ServerUrlFormat qualified
 import Properties.ResourceLocation.Monoid qualified
+import Test.Hspec
+import Prelude
 
 main ∷ IO ()
 main = hspec do

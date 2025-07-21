@@ -2,8 +2,6 @@ module OpenApiGuide.BasicStructure.Main where
 
 import Essentials
 
-import Test.Hspec
-
 import Data.ByteString.Builder qualified as BSB
 import Data.Foldable
 import Data.List (map)
@@ -12,10 +10,10 @@ import Language.Haskell.TH qualified as TH
 import List.Transformer qualified as ListT
 import Network.HTTP.Simple
 import Network.Wai.Handler.Warp
-import System.IO (IO)
-import Prelude (fromIntegral, show)
-
 import OpenApiTH
+import System.IO (IO)
+import Test.Hspec
+import Prelude (fromIntegral, show)
 
 oath do
   declare ["GetUsers"]

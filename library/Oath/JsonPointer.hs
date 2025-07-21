@@ -1,5 +1,5 @@
 -- | <https://datatracker.ietf.org/doc/html/rfc6901>
-module Oath.JsonPointer.Rfc6901 where
+module Oath.JsonPointer where
 
 import Essentials
 

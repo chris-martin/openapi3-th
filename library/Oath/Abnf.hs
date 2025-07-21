@@ -1,5 +1,5 @@
--- | https://www.rfc-editor.org/rfc/rfc2234
-module Oath.Abnf.Rfc2234 (
+-- | <https://www.rfc-editor.org/rfc/rfc2234>
+module Oath.Abnf (
   char,
   alphaGrammar,
   digitNumGrammar,

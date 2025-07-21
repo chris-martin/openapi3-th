@@ -1,5 +1,5 @@
 -- | <https://www.rfc-editor.org/rfc/rfc7617>
-module Oath.BasicAuth.Rfc7617 where
+module Oath.BasicAuth where
 
 import Essentials
 

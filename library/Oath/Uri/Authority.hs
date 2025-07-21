@@ -1,4 +1,4 @@
-module Oath.Uri.Rfc3986.Grammar.Authority where
+module Oath.Uri.Authority where
 
 import Essentials
 
@@ -7,10 +7,10 @@ import Data.ByteString qualified as BS
 import Optics
 import Test.QuickCheck.Arbitrary.Generic
 
-import Oath.Abnf.Rfc2234
+import Oath.Abnf
 import Oath.Grammar
-import Oath.Uri.Rfc3986.Grammar.Characters
-import Oath.Uri.Rfc3986.Grammar.Host
+import Oath.Uri.Characters
+import Oath.Uri.Host
 
 data Authority = Authority
   { userinfo ∷ Maybe ByteString
@@ -20,17 +20,17 @@ data Authority = Authority
 
 makeFieldLabels ''Authority
 
-instance HasGrammar Authority where
-  grammar =
-    label "authority"
-      $ isoGrammar
-        ( iso
-            (\Authority {userinfo, host, port} → userinfo :& host :& port)
-            (\(userinfo :& host :& port) → Authority {userinfo, host, port})
-        )
-      $ optionalGrammar (userinfoGrammar <+ constGrammar "@")
-        <+> grammar
-        <+> optionalGrammar (constGrammar ":" +> portGrammar)
+authorityGrammar ∷ Grammar Authority
+authorityGrammar =
+  label "authority"
+    $ isoGrammar
+      ( iso
+          (\Authority {userinfo, host, port} → userinfo :& host :& port)
+          (\(userinfo :& host :& port) → Authority {userinfo, host, port})
+      )
+    $ optionalGrammar (userinfoGrammar <+ constGrammar "@")
+      <+> hostGrammar
+      <+> optionalGrammar (constGrammar ":" +> portGrammar)
 
 userinfoGrammar ∷ Grammar ByteString
 userinfoGrammar =
@@ -50,7 +50,5 @@ portGrammar =
     isoGrammar (iso BS.unpack BS.pack) $
       listGrammar digitCharGrammar
 
-deriving via
-  TheGrammar Authority
-  instance
-    Arbitrary Authority
+instance Arbitrary Authority where
+  arbitrary = authorityGrammar.generator

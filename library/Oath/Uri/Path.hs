@@ -1,4 +1,4 @@
-module Oath.Uri.Rfc3986.Grammar.Path where
+module Oath.Uri.Path where
 
 import Essentials
 
@@ -8,7 +8,18 @@ import Data.Sequence.NonEmpty (NESeq (..))
 import Optics hiding (Empty)
 
 import Oath.Grammar
-import Oath.Uri.Rfc3986.Grammar.Segment
+import Oath.Uri.Segment
+
+-- | <https://www.rfc-editor.org/rfc/rfc3986#section-5.2.4>
+removeDotSegments ∷ Seq ByteString → Seq ByteString
+removeDotSegments = go Empty
+ where
+  go t = \case
+    Empty → t
+    Empty :|> ".." → t
+    xs :|> "." → go t xs
+    xs :|> _ :|> ".." → go t xs
+    xs :|> x → go (x :<| t) xs
 
 pathAbemptyGrammar ∷ Grammar (Seq ByteString)
 pathAbemptyGrammar =
@@ -26,8 +37,7 @@ pathAbsoluteGrammar =
       )
     $ constGrammar "/"
       +> optionalGrammar
-        ( segmentNzGrammar <+> seqGrammar (constGrammar "/" +> segmentGrammar)
-        )
+        (segmentNzGrammar <+> seqGrammar (constGrammar "/" +> segmentGrammar))
 
 pathNoschemeGrammar ∷ Grammar (NESeq ByteString)
 pathNoschemeGrammar =

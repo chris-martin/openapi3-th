@@ -3,8 +3,6 @@ module OpenApiGuide.ServerUrlFormat where
 
 import Essentials
 
-import Test.Hspec
-
 import Data.ByteString.Builder qualified as BSB
 import Data.Either (Either (..))
 import Data.Foldable
@@ -17,11 +15,11 @@ import Language.Haskell.TH qualified as TH
 import List.Transformer qualified as ListT
 import Network.HTTP.Simple
 import Network.Wai.Handler.Warp
+import OpenApiTH
 import Optics
 import System.IO (IO)
+import Test.Hspec
 import Prelude (fromIntegral, show)
-
-import OpenApiTH
 
 check ∷ Text → ResourceLocation → Spec
 check t x = it (Text.unpack t) $ readResourceLocation t `shouldBe` Right x

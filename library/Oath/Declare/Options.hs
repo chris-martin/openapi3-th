@@ -10,12 +10,12 @@ import Data.Set qualified as Set
 import Data.String
 import Data.Text (Text)
 import Data.Text qualified as Text
-import Oath.Relation (Relation)
-import Oath.Relation qualified as Relation
 import System.IO (FilePath)
 import Prelude (error)
 
 import Oath.OpenApi
+import Oath.Relation (Relation)
+import Oath.Relation qualified as Relation
 import Oath.Web
 
 data Options = Options

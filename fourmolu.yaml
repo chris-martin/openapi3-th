@@ -8,3 +8,14 @@ unicode: always
 respectful: true
 single-constraint-parens: never
 single-deriving-parens: never
+import-grouping:
+  - name: Prelude
+    rules:
+      - glob: Essentials
+  - name: External
+    rules:
+      - match: all
+        priority: 100
+  - name: Internal
+    rules:
+      - glob: Oath.**

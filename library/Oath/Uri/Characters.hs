@@ -1,14 +1,14 @@
-module Oath.Uri.Rfc3986.Grammar.Characters where
+module Oath.Uri.Characters where
 
 import Essentials
 
 import Data.Bits (shiftL, shiftR, (.&.))
 import Data.Word
+import Optics
 import Prelude ((+))
 
-import Oath.Abnf.Rfc2234
+import Oath.Abnf
 import Oath.Grammar
-import Optics
 
 pcharGrammar ∷ Grammar Word8
 pcharGrammar =
