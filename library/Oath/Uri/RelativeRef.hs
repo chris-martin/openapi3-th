@@ -9,6 +9,7 @@ import Test.QuickCheck.Arbitrary.Generic
 
 import Oath.Grammar
 import Oath.Uri.Appendages
+import Oath.Uri.Authority
 import Oath.Uri.HierPart
 
 data RelativeRef = RelativeRef
@@ -19,6 +20,9 @@ data RelativeRef = RelativeRef
   deriving stock Generic
 
 makeFieldLabels ''RelativeRef
+
+instance LabelOptic "authority" An_AffineTraversal RelativeRef RelativeRef Authority Authority where
+  labelOptic = #hierPart % #_HierPart_Authority % _1
 
 relativeRefGrammar ∷ Grammar RelativeRef
 relativeRefGrammar =

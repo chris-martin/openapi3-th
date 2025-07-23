@@ -2,6 +2,7 @@ module Oath.Uri.HierPart (
   HierPart (..),
   hierPartGrammar,
   relativePartGrammar,
+  absoluteHierPart,
 ) where
 
 import Essentials
@@ -31,11 +32,16 @@ data HierPart
 
 makePrismLabels ''HierPart
 
+absoluteHierPart ∷ Maybe Authority → Seq ByteString → HierPart
+absoluteHierPart = \case
+  Nothing → HierPart_Absolute
+  Just authority → HierPart_Authority authority
+
 instance LabelOptic "absolute" A_Getter HierPart HierPart Bool Bool where
   labelOptic = to \case
-    HierPart_Authority _ _ -> True
-    HierPart_Absolute _ -> True
-    HierPart_Relative _ -> False
+    HierPart_Authority _ _ → True
+    HierPart_Absolute _ → True
+    HierPart_Relative _ → False
 
 instance LabelOptic "path" A_Lens HierPart HierPart (Seq ByteString) (Seq ByteString) where
   labelOptic =
