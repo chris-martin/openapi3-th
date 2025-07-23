@@ -17,6 +17,7 @@ data Authority = Authority
   , host ∷ Host
   , port ∷ Maybe ByteString
   }
+  deriving stock (Eq, Show)
 
 makeFieldLabels ''Authority
 

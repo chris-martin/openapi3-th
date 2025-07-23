@@ -23,6 +23,8 @@ import Text.Megaparsec (Parsec)
 import Text.Megaparsec qualified as P
 import Prelude (String, error)
 
+import Oath.ByteString
+
 infixl 2 :&
 infixl 4 <+>
 infixl 4 +>
@@ -122,9 +124,6 @@ tokenPredicate f generator =
         Just $ renderConst $ BSB.word8 x
     }
 
-build ∷ Builder → BS.StrictByteString
-build = BSL.toStrict . BSB.toLazyByteString
-
 grammarAlternatives ∷ [Grammar a] → Grammar a
 grammarAlternatives xs =
   Grammar
@@ -209,3 +208,8 @@ optionalGrammar Grammar {render, parser, generator} =
     , parser = P.optional parser
     , generator = QC.liftArbitrary generator
     }
+
+forceRenderCanonical ∷ Grammar a → a → Builder
+forceRenderCanonical Grammar {render} x =
+  let Just Render {canonical} = render x
+   in canonical

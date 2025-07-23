@@ -23,6 +23,7 @@ import Text.Megaparsec qualified as P
 import Prelude (fromIntegral, (*), (+))
 
 import Oath.Abnf
+import Oath.ByteString
 import Oath.Grammar
 import Oath.Uri.Characters
 
@@ -30,16 +31,18 @@ data Host
   = Host_IpLiteral IpLiteral
   | Host_Ipv4 ByteString
   | Host_RegName ByteString
+  deriving stock (Eq, Show)
 
 data IpLiteral
   = IpLiteral_V6 ByteString
   | IpLiteral_Future IpvFuture
-  deriving stock Generic
+  deriving stock (Eq, Show, Generic)
 
 data IpvFuture = IpvFuture
   { version ∷ Word8
   , address ∷ ByteString
   }
+  deriving stock (Eq, Show)
 
 makePrismLabels ''Host
 makePrismLabels ''IpLiteral
@@ -98,7 +101,7 @@ ipv6AddressGrammar =
                   , void $ P.single $ char ':'
                   ]
       , generator =
-          fmap build $
+          fmap buildStrict $
             QC.oneof
               [ rep' 6 (h16 ^ pure ":") ^ ls32
               , pure "::" ^ rep' 5 (h16 ^ pure ":") ^ ls32
@@ -140,7 +143,7 @@ ipv4AddressGrammar =
               d = P.single $ char '.'
           o *> d *> o *> d *> o *> d *> o
       , generator =
-          fmap (build . fold . List.intersperse ".") $
+          fmap (buildStrict . fold . List.intersperse ".") $
             replicateM 4 (renderGenerator decOctetGrammar)
       }
 
@@ -176,3 +179,6 @@ instance Arbitrary IpLiteral where
 
 instance Arbitrary IpvFuture where
   arbitrary = ipvFutureGrammar.generator
+
+renderHost ∷ Host → Builder
+renderHost = forceRenderCanonical hostGrammar

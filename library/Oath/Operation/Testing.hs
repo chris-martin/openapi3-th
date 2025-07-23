@@ -19,7 +19,6 @@ import Oath.Operation.Message
 import Oath.Operation.Operation
 import Oath.Operation.OutgoingRequest
 import Oath.Operation.Wai
-import Oath.Web
 
 -- | Test making an HTTP request using http-client as the client
 --   and Warp as the server

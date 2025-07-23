@@ -23,7 +23,7 @@ data UriReference = UriReference
   , query ∷ Maybe ByteString
   , fragment ∷ Maybe ByteString
   }
-  deriving stock Generic
+  deriving stock (Generic, Eq, Show)
 
 makeFieldLabels ''UriReference
 

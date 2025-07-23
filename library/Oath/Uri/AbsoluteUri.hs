@@ -21,7 +21,7 @@ data AbsoluteUri = AbsoluteUri
   , hierPart ∷ HierPart
   , query ∷ Maybe ByteString
   }
-  deriving stock Generic
+  deriving stock (Generic, Eq, Show)
 
 makeFieldLabels ''AbsoluteUri
 

@@ -31,11 +31,13 @@ import Network.HTTP.Simple
 import Network.HTTP.Types.Header qualified as Http
 import Network.HTTP.Types.Status qualified as Http
 import Network.Wai.Handler.Warp
+import Optics
 import System.IO (IO)
 import Test.Hspec
 import Text.Show (show)
 import Prelude (fromIntegral)
 
+import Oath.ByteString
 import Oath.OpenApi
 import Oath.Operation.IncomingRequest
 import Oath.Operation.IncomingResponse
@@ -44,19 +46,19 @@ import Oath.Operation.Operation
 import Oath.Operation.OutgoingRequest
 import Oath.Operation.OutgoingResponse
 import Oath.Operation.Wai
-import Oath.Web
+import Oath.Uri
 
 buildHttpClientRequest
   ∷ Message OutgoingRequest (ListT IO BSB.Builder) → IO HttpClient.Request
 buildHttpClientRequest message = do
   result ← runValidateT do
-    scheme ← maybe (refute ["No scheme"]) pure message.head.location.scheme
-    authority ← case message.head.location.context of
-      AuthorityContext x → pure x
+    let scheme = message.head.location.scheme
+    authority ← case message.head.location ^? #authority of
+      Just x → pure x
       _ → refute ["No authority"]
     secure ←
-      maybe (refute ["Scheme is not HTTP"]) pure $
-        List.lookup (Text.toLower scheme) [("http", False), ("https", True)]
+      maybe (refute ["Scheme is not http(s)"]) pure $
+        List.lookup scheme [("http", False), ("https", True)]
     port ← case authority.port of
       Just x → case toIntegralSized x of
         Just y → pure y
@@ -68,7 +70,7 @@ buildHttpClientRequest message = do
       HttpClient.defaultRequest
         & setRequestMethod message.head.method
         & setRequestSecure secure
-        & setRequestHost (Text.encodeUtf8 authority.host)
+        & setRequestHost (buildStrict $ renderHost authority.host)
         & setRequestPort port
         & setRequestPath (renderPath message.head.location.path)
         & ( \x →
@@ -102,12 +104,11 @@ readHttpClientResponse x = do
       }
 
 statusBs ∷ Http.Status → StrictByteString
-statusBs = BSL.toStrict . BSB.toLazyByteString . BSB.intDec . Http.statusCode
+statusBs = buildStrict . BSB.intDec . Http.statusCode
 
 renderPath ∷ Seq Text → StrictByteString
 renderPath =
-  BSL.toStrict
-    . BSB.toLazyByteString
+  buildStrict
     . fold
     . fmap ((\x → "/" <> Text.encodeUtf8Builder x))
     . toList

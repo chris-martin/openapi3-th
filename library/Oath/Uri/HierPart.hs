@@ -29,6 +29,7 @@ data HierPart
   = HierPart_Authority Authority (Seq ByteString)
   | HierPart_Absolute (Seq ByteString)
   | HierPart_Relative (Seq ByteString)
+  deriving stock (Eq, Show)
 
 makePrismLabels ''HierPart
 

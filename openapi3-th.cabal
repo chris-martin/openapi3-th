@@ -71,6 +71,7 @@ library
     Oath
     Oath.Abnf
     Oath.BasicAuth
+    Oath.ByteString
     Oath.Declare.Declare
     Oath.Declare.Options
     Oath.Grammar

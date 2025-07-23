@@ -3,11 +3,13 @@ module Oath.Uri.Uri where
 import Essentials
 
 import Data.ByteString (ByteString)
+import GHC.Generics
 import Optics
 import Test.QuickCheck.Arbitrary.Generic
 
 import Oath.Grammar
 import Oath.Uri.Appendages
+import Oath.Uri.Authority
 import Oath.Uri.HierPart
 import Oath.Uri.Scheme
 
@@ -17,8 +19,12 @@ data Uri = Uri
   , query ∷ Maybe ByteString
   , fragment ∷ Maybe ByteString
   }
+  deriving stock (Eq, Show, Generic)
 
 makeFieldLabels ''Uri
+
+instance LabelOptic "authority" An_AffineTraversal Uri Uri Authority Authority where
+  labelOptic = #hierPart % #authority
 
 uriGrammar ∷ Grammar Uri
 uriGrammar =
