@@ -3,6 +3,7 @@ module Oath.Uri.Path where
 import Essentials
 
 import Data.ByteString (ByteString)
+import Data.ByteString.Builder (Builder)
 import Data.Sequence (Seq (..))
 import Data.Sequence.NonEmpty (NESeq (..))
 import Optics hiding (Empty)

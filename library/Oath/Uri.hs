@@ -1,12 +1,17 @@
 -- | <https://www.ietf.org/rfc/rfc3986.txt>
 module Oath.Uri (
+  -- * Types
   Uri (..),
   AbsoluteUri (..),
   RelativeRef (..),
   HierPart (..),
   Authority (..),
   Host (..),
+
+  -- * Render
   renderHost,
+
+  -- * Logic
   resolveUriReference,
 ) where
 

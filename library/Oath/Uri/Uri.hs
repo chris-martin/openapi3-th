@@ -3,6 +3,7 @@ module Oath.Uri.Uri where
 import Essentials
 
 import Data.ByteString (ByteString)
+import Data.Sequence (Seq)
 import GHC.Generics
 import Optics
 import Test.QuickCheck.Arbitrary.Generic
@@ -25,6 +26,9 @@ makeFieldLabels ''Uri
 
 instance LabelOptic "authority" An_AffineTraversal Uri Uri Authority Authority where
   labelOptic = #hierPart % #authority
+
+instance LabelOptic "path" A_Lens Uri Uri (Seq ByteString) (Seq ByteString) where
+  labelOptic = #hierPart % #path
 
 uriGrammar ∷ Grammar Uri
 uriGrammar =

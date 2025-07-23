@@ -7,45 +7,28 @@ import Conduit
 import Control.Applicative (empty)
 import Control.Monad.Fail
 import Control.Monad.Validate (refute, runValidateT)
-import Control.Monad.Yield
-import Data.Bits (toIntegralSized)
 import Data.ByteString (ByteString, StrictByteString)
 import Data.ByteString qualified as BS
-import Data.ByteString qualified as BSL
-import Data.ByteString.Builder (Builder)
 import Data.ByteString.Builder qualified as BSB
-import Data.ByteString.Builder qualified as Builder
-import Data.ByteString.Lazy (LazyByteString)
+import Data.ByteString.Char8 qualified as BS
 import Data.Conduit.Internal (ConduitT (..), Pipe (..))
 import Data.Either (either)
-import Data.Foldable (concat, fold, toList)
 import Data.List qualified as List
-import Data.Sequence (Seq)
 import Data.Text (Text)
-import Data.Text qualified as Text
-import Data.Text.Encoding qualified as Text
-import Data.Vector qualified as V
 import List.Transformer (ListT (..), Step (..))
 import Network.HTTP.Client qualified as HttpClient
 import Network.HTTP.Simple
 import Network.HTTP.Types.Header qualified as Http
 import Network.HTTP.Types.Status qualified as Http
-import Network.Wai.Handler.Warp
 import Optics
 import System.IO (IO)
-import Test.Hspec
 import Text.Show (show)
-import Prelude (fromIntegral)
 
 import Oath.ByteString
-import Oath.OpenApi
-import Oath.Operation.IncomingRequest
+import Oath.Http
 import Oath.Operation.IncomingResponse
 import Oath.Operation.Message
-import Oath.Operation.Operation
 import Oath.Operation.OutgoingRequest
-import Oath.Operation.OutgoingResponse
-import Oath.Operation.Wai
 import Oath.Uri
 
 buildHttpClientRequest
@@ -60,9 +43,9 @@ buildHttpClientRequest message = do
       maybe (refute ["Scheme is not http(s)"]) pure $
         List.lookup scheme [("http", False), ("https", True)]
     port ← case authority.port of
-      Just x → case toIntegralSized x of
-        Just y → pure y
-        _ → refute ["Port out of range"]
+      Just x → case BS.readInt x of
+        Just (y, r) | BS.null r → pure y
+        _ → refute ["Port invalid"]
       Nothing → pure case secure of
         False → 80
         True → 443
@@ -72,7 +55,7 @@ buildHttpClientRequest message = do
         & setRequestSecure secure
         & setRequestHost (buildStrict $ renderHost authority.host)
         & setRequestPort port
-        & setRequestPath (renderPath message.head.location.path)
+        & setRequestPath (buildStrict $ renderPath $ message.head.location ^. #path)
         & ( \x →
               x
                 { HttpClient.requestHeaders =
@@ -105,10 +88,3 @@ readHttpClientResponse x = do
 
 statusBs ∷ Http.Status → StrictByteString
 statusBs = buildStrict . BSB.intDec . Http.statusCode
-
-renderPath ∷ Seq Text → StrictByteString
-renderPath =
-  buildStrict
-    . fold
-    . fmap ((\x → "/" <> Text.encodeUtf8Builder x))
-    . toList
