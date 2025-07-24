@@ -35,7 +35,7 @@ buildHttpClientRequest
   ∷ Message OutgoingRequest (ListT IO BSB.Builder) → IO HttpClient.Request
 buildHttpClientRequest message = do
   result ← runValidateT do
-    let scheme = message.head.location.scheme
+    scheme ← maybe _ pure $ message.head.location.scheme
     authority ← case message.head.location ^? #authority of
       Just x → pure x
       _ → refute ["No authority"]

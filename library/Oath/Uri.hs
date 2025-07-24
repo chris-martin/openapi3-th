@@ -3,6 +3,7 @@ module Oath.Uri (
   -- * Types
   Uri (..),
   AbsoluteUri (..),
+  UriReference (..),
   RelativeRef (..),
   HierPart (..),
   Authority (..),
@@ -22,3 +23,4 @@ import Oath.Uri.Host
 import Oath.Uri.RelativeRef
 import Oath.Uri.RelativeResolution
 import Oath.Uri.Uri
+import Oath.Uri.UriReference
