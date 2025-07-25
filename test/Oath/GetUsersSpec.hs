@@ -1,4 +1,4 @@
-module OpenApiGuide.BasicStructure.Main where
+module Oath.GetUsersSpec (spec) where
 
 import Essentials
 
@@ -15,10 +15,9 @@ import System.IO (IO)
 import Test.Hspec
 import Prelude (fromIntegral, show)
 
-oath do
-  declare ["GetUsers"]
-  withSpecFile "examples/OpenApiGuide/BasicStructure/openapi.yaml" do
-    at ["paths", "/users", "/get"] $ dub "GetUsers"
+oath $ withSpecFile "../example-openapi.yaml" do
+  at ["servers"] $ pickServerUrl "http://api.example.com/v1"
+  at ["paths", "/users", "/get"] $ declareAs "GetUsers"
 
 server ∷ OperationServer GetUsers IO
 server () = pure ["AJ", "Pat"]

@@ -12,6 +12,9 @@ module Oath.Uri (
   -- * Render
   renderHost,
 
+  -- * Read
+  readUriReferenceMaybe,
+
   -- * Logic
   resolveUriReference,
 ) where

@@ -1,4 +1,4 @@
-module OpenApiGuide.MediaTypes.Main where
+module Oath.GetEmployeesSpec (spec) where
 
 import Essentials
 

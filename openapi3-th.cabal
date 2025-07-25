@@ -110,7 +110,7 @@ test-suite test
   import:         base
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
-  hs-source-dirs: test examples properties
+  hs-source-dirs: test
   build-depends:
     , base
     , bytestring
@@ -126,11 +126,9 @@ test-suite test
     , text
     , warp
 
-  -- cabal-fmt: expand examples
+  -- cabal-fmt: expand test
   other-modules:
-    OpenApiGuide.BasicStructure.Main
-    OpenApiGuide.MediaTypes.Main
-    OpenApiGuide.ServerUrlFormat
-
-  -- cabal-fmt: expand properties
-  other-modules:  Properties.ResourceLocation.Monoid
+    Oath.GetEmployeesSpec
+    Oath.GetUsersSpec
+    Oath.Uri.ReadUriReferenceSpec
+    Spec

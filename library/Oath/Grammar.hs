@@ -5,11 +5,11 @@ import Essentials
 import Control.Applicative (asum, liftA2)
 import Control.Monad (guard)
 import Data.ByteString (ByteString)
-import Data.ByteString qualified as BS
 import Data.ByteString.Builder (Builder)
 import Data.ByteString.Builder qualified as BSB
-import Data.ByteString.Lazy qualified as BSL
+import Data.Either (either)
 import Data.Foldable (fold, toList)
+import Data.Function (const)
 import Data.List qualified as List
 import Data.List.NonEmpty (NonEmpty ((:|)), nonEmpty)
 import Data.Maybe (mapMaybe)
@@ -22,8 +22,6 @@ import Test.QuickCheck qualified as QC
 import Text.Megaparsec (Parsec)
 import Text.Megaparsec qualified as P
 import Prelude (String, error)
-
-import Oath.ByteString
 
 infixl 2 :&
 infixl 4 <+>
@@ -213,3 +211,7 @@ forceRenderCanonical ∷ Grammar a → a → Builder
 forceRenderCanonical Grammar {render} x =
   let Just Render {canonical} = render x
    in canonical
+
+readGrammarMaybe ∷ Grammar a → ByteString → Maybe a
+readGrammarMaybe Grammar {parser} =
+  either (const Nothing) Just . P.parse (parser <* P.eof) ""

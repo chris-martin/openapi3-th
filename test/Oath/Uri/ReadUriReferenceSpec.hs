@@ -1,5 +1,4 @@
--- https://swagger.io/docs/specification/v3_0/api-host-and-base-path/
-module OpenApiGuide.ServerUrlFormat where
+module Oath.Uri.ReadUriReferenceSpec (spec) where
 
 import Essentials
 
@@ -22,10 +21,10 @@ import Test.Hspec
 import Prelude (fromIntegral, show)
 
 check ∷ Text → ResourceLocation → Spec
-check t x = it (Text.unpack t) $ readResourceLocation t `shouldBe` Right x
+check t x = it (Text.unpack t) $ readUriReferenceMaybe t `shouldBe` Just x
 
 spec ∷ Spec
-spec = describe "readResourceLocation" do
+spec = do
   check "https://api.example.com" $
     mempty
       & #scheme ?~ "https"

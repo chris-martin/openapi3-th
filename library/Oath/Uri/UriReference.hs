@@ -69,3 +69,6 @@ uriReferenceGrammar =
 
 instance Arbitrary UriReference where
   arbitrary = uriReferenceGrammar.generator
+
+readUriReferenceMaybe ∷ ByteString → Maybe UriReference
+readUriReferenceMaybe = readGrammarMaybe uriReferenceGrammar

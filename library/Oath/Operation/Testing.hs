@@ -2,6 +2,7 @@ module Oath.Operation.Testing where
 
 import Essentials
 
+import Data.ByteString.Builder qualified as BSB
 import Data.Sequence qualified as Seq
 import Network.HTTP.Simple
 import Network.Wai.Handler.Warp
@@ -15,7 +16,6 @@ import Oath.Operation.HttpClient
 import Oath.Operation.Operation
 import Oath.Operation.Wai
 import Oath.Uri
-import qualified Data.ByteString.Builder as BSB
 
 -- | Test making an HTTP request using http-client as the client
 --   and Warp as the server

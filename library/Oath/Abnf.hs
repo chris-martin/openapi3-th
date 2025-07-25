@@ -11,43 +11,18 @@ module Oath.Abnf (
 
 import Essentials
 
-import Control.Applicative (Alternative (..), asum, liftA2)
-import Control.Monad (guard, mfilter, replicateM, replicateM_, unless)
-import Control.Monad.Fail
-import Control.Monad.Validate
-import Data.Bifunctor (first)
-import Data.Bool (not, (&&), (||))
-import Data.ByteString (ByteString)
-import Data.ByteString qualified as BS
+import Control.Monad (guard)
+import Data.Bool ((&&), (||))
 import Data.ByteString.Builder qualified as BSB
 import Data.Char (Char)
 import Data.Char qualified as Char
-import Data.Either (Either (..), either)
-import Data.Function (const)
-import Data.List qualified as List
-import Data.Sequence (Seq (..))
-import Data.Sequence qualified as Seq
-import Data.String (IsString (..))
-import Data.Text (Text)
-import Data.Text qualified as Text
-import Data.Text.Encoding qualified as Text
-import Data.Text.Lazy.Builder qualified as TB
 import Data.Tuple
-import Data.Vector qualified as V
 import Data.Word
 import GHC.Generics
-import Language.Haskell.TH.Quote
-import Language.Haskell.TH.Syntax
-import Numeric.Natural (Natural)
 import Optics
-import Optics.TH
-import Test.QuickCheck (Gen)
 import Test.QuickCheck qualified as QC
 import Test.QuickCheck.Arbitrary.Generic
-import Text.Megaparsec (Parsec)
 import Text.Megaparsec qualified as P
-import Text.Megaparsec.Byte.Lexer qualified as P
-import Text.Show (show)
 import Prelude (Num ((+), (-)), fromIntegral)
 
 import Oath.Grammar

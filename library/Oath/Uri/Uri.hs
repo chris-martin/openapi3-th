@@ -49,4 +49,3 @@ uriGrammar =
 
 instance Arbitrary Uri where
   arbitrary = uriGrammar.generator
-

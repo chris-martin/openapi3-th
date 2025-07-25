@@ -35,8 +35,8 @@ buildHttpClientRequest
   ∷ Message OutgoingRequest (ListT IO BSB.Builder) → IO HttpClient.Request
 buildHttpClientRequest message = do
   result ← runValidateT do
-    scheme ← maybe _ pure $ message.head.location.scheme
-    authority ← case message.head.location ^? #authority of
+    let scheme = message.head.scheme
+    authority ← case message.head ^? #authority of
       Just x → pure x
       _ → refute ["No authority"]
     secure ←
@@ -55,7 +55,7 @@ buildHttpClientRequest message = do
         & setRequestSecure secure
         & setRequestHost (buildStrict $ renderHost authority.host)
         & setRequestPort port
-        & setRequestPath (buildStrict $ renderPath $ message.head.location ^. #path)
+        & setRequestPath (buildStrict $ renderPath $ message.head ^. #path)
         & ( \x →
               x
                 { HttpClient.requestHeaders =
