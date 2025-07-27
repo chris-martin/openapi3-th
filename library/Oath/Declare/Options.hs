@@ -16,7 +16,6 @@ import Prelude (error)
 import Oath.OpenApi
 import Oath.Relation (Relation)
 import Oath.Relation qualified as Relation
-import Oath.Web
 
 data Options = Options
   { specFile ∷ Maybe FilePath

@@ -2,16 +2,14 @@ module Oath.Operation.Testing where
 
 import Essentials
 
-import Data.ByteString.Builder qualified as BSB
 import Data.Sequence qualified as Seq
 import Network.HTTP.Simple
 import Network.Wai.Handler.Warp
-import Optics
 import System.IO (IO)
 import Test.Hspec
-import Prelude (fromIntegral)
 
 import Oath.ByteString
+import Oath.OpenApi
 import Oath.Operation.HttpClient
 import Oath.Operation.Operation
 import Oath.Operation.Wai
@@ -29,23 +27,15 @@ assertHttpClientWarpExchange
 assertHttpClientWarpExchange request server = do
   expectedResponse ← server request
   testWithApplication (pure $ operationWaiApplication @op server) \port → do
-    let baseUri =
-          AbsoluteUri
-            { scheme = "http"
-            , hierPart =
-                HierPart_Authority
-                  Authority
-                    { userinfo = Nothing
-                    , host = Host_RegName "localhost"
-                    , port = Just $ buildStrict $ BSB.intDec port
-                    }
-                  Seq.Empty
-            , query = Nothing
+    let authority =
+          Authority
+            { userinfo = Nothing
+            , host = Host_RegName "localhost"
+            , port = Just $ intDecBs port
             }
-    request ←
-      over (#head % #location) (resolveUriReference baseUri)
-        <$> buildOperationRequest @op request
-    httpClientRequest ← buildHttpClientRequest request
+        serverUrl = ServerUrl {scheme = "http", authority, path = Seq.Empty}
+    requestMessage ← buildOperationRequest @op request
+    httpClientRequest ← buildHttpClientRequest serverUrl requestMessage
     withResponse httpClientRequest $ \httpClientResponse → do
       responseReader ← readHttpClientResponse httpClientResponse
       response ← readOperationResponse @op responseReader

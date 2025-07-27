@@ -26,19 +26,18 @@ import Text.Show (show)
 
 import Oath.ByteString
 import Oath.Http
+import Oath.OpenApi
 import Oath.Operation.IncomingResponse
 import Oath.Operation.Message
 import Oath.Operation.OutgoingRequest
 import Oath.Uri
 
 buildHttpClientRequest
-  ∷ Message OutgoingRequest (ListT IO BSB.Builder) → IO HttpClient.Request
-buildHttpClientRequest message = do
+  ∷ ServerUrl → Message OutgoingRequest (ListT IO BSB.Builder) → IO HttpClient.Request
+buildHttpClientRequest server message = do
   result ← runValidateT do
-    let scheme = message.head.scheme
-    authority ← case message.head ^? #authority of
-      Just x → pure x
-      _ → refute ["No authority"]
+    let scheme = server.scheme
+        authority = server.authority
     secure ←
       maybe (refute ["Scheme is not http(s)"]) pure $
         List.lookup scheme [("http", False), ("https", True)]

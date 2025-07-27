@@ -16,7 +16,6 @@ import Test.Hspec
 import Prelude (fromIntegral, show)
 
 oath $ withSpecFile "../example-openapi.yaml" do
-  at ["servers"] $ pickServerUrl "http://api.example.com/v1"
   at ["paths", "/users", "/get"] $ declareAs "GetUsers"
 
 server ∷ OperationServer GetUsers IO

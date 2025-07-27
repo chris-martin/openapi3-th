@@ -81,6 +81,7 @@ library
     Oath.OpenApi.DataType
     Oath.OpenApi.ReadSpecFile
     Oath.OpenApi.Schema
+    Oath.OpenApi.ServerUrl
     Oath.Operation.HttpClient
     Oath.Operation.IncomingRequest
     Oath.Operation.IncomingResponse

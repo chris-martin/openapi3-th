@@ -40,7 +40,7 @@ buildWaiResponse message = do
     Just (i, r) | BS.null r → pure i
     _ → fail "Invalid status code"
   let status = Status statusCodeInt ""
-  pure $ Wai.responseStream status [] (listToWaiStreamingBody message.body)
+  pure $ Wai.responseStream status [] (listToWaiStreamingBody body)
 
 listToWaiStreamingBody ∷ ListT IO BSB.Builder → Wai.StreamingBody
 listToWaiStreamingBody xs write _flush = runListT $ xs >>= lift . write
