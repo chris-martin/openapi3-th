@@ -3,6 +3,7 @@ module Oath.Grammar where
 import Essentials
 
 import Control.Applicative (asum, liftA2)
+import Control.Exception (Exception, throw)
 import Control.Monad (guard)
 import Data.ByteString (ByteString)
 import Data.ByteString.Builder (Builder)
@@ -198,6 +199,7 @@ list1Grammar Grammar {render, parser, generator} =
     }
  where
   f (x : xs) = x :| xs
+  f [] = undefined
 
 optionalGrammar ∷ Grammar a → Grammar (Maybe a)
 optionalGrammar Grammar {render, parser, generator} =
@@ -209,8 +211,13 @@ optionalGrammar Grammar {render, parser, generator} =
 
 forceRenderCanonical ∷ Grammar a → a → Builder
 forceRenderCanonical Grammar {render} x =
-  let Just Render {canonical} = render x
-   in canonical
+  case render x of
+    Just Render {canonical} → canonical
+    Nothing → throw Unrenderable
+
+data Unrenderable = Unrenderable
+  deriving stock (Eq, Show)
+  deriving anyclass Exception
 
 readGrammarMaybe ∷ Grammar a → ByteString → Maybe a
 readGrammarMaybe Grammar {parser} =

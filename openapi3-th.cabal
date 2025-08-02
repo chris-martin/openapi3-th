@@ -11,6 +11,7 @@ common base
     ApplicativeDo
     BlockArguments
     DataKinds
+    DeriveAnyClass
     DerivingStrategies
     DerivingVia
     DuplicateRecordFields
