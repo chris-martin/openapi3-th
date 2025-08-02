@@ -28,7 +28,7 @@ makeFieldLabels ''AbsoluteUri
 instance LabelOptic "authority" An_AffineTraversal AbsoluteUri AbsoluteUri Authority Authority where
   labelOptic = #hierPart % #_HierPart_Authority % _1
 
-absoluteUriGrammar ∷ Grammar AbsoluteUri
+absoluteUriGrammar ∷ Grammar ByteString AbsoluteUri
 absoluteUriGrammar =
   label "absolute-uri"
     $ isoGrammar

@@ -15,7 +15,6 @@ import Data.Vector qualified as V
 newtype JsonPointer = JsonPointer (Seq Text)
 
 -- jsonPointerGrammar
--- todo: will want to generalize Grammar to include Text
 
 -- | https://www.rfc-editor.org/rfc/rfc6901#section-4
 evaluateJsonPointer ∷ JsonPointer → Value → Maybe Value

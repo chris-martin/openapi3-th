@@ -11,13 +11,13 @@ import Oath.Abnf
 import Oath.Grammar
 import Oath.Uri.Characters
 
-queryGrammar ∷ Grammar ByteString
+queryGrammar ∷ Grammar ByteString ByteString
 queryGrammar = label "query" appendageGrammar
 
-fragmentGrammar ∷ Grammar ByteString
+fragmentGrammar ∷ Grammar ByteString ByteString
 fragmentGrammar = label "fragment" appendageGrammar
 
-appendageGrammar ∷ Grammar ByteString
+appendageGrammar ∷ Grammar ByteString ByteString
 appendageGrammar =
   isoGrammar (iso BS.unpack BS.pack) $
     listGrammar $

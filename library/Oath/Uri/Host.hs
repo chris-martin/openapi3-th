@@ -7,8 +7,8 @@ import Control.Monad (replicateM)
 import Data.Bits (toIntegralSized)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
-import Data.ByteString.Builder (Builder)
-import Data.ByteString.Builder qualified as BSB
+import Data.ByteString.Builder ()
+import Data.ByteString.Builder qualified as BSB hiding (Builder)
 import Data.Foldable (fold, foldl')
 import Data.List qualified as List
 import Data.Tuple
@@ -48,7 +48,7 @@ makePrismLabels ''Host
 makePrismLabels ''IpLiteral
 makeFieldLabels ''IpvFuture
 
-hostGrammar ∷ Grammar Host
+hostGrammar ∷ Grammar ByteString Host
 hostGrammar =
   label "host" $
     grammarAlternatives
@@ -57,7 +57,7 @@ hostGrammar =
       , prismGrammar #_Host_RegName regNameGrammar
       ]
 
-ipLiteralGrammar ∷ Grammar IpLiteral
+ipLiteralGrammar ∷ Grammar ByteString IpLiteral
 ipLiteralGrammar =
   label "IP-literal" $
     grammarAlternatives
@@ -66,7 +66,7 @@ ipLiteralGrammar =
       , prismGrammar #_IpLiteral_Future ipvFutureGrammar
       ]
 
-ipvFutureGrammar ∷ Grammar IpvFuture
+ipvFutureGrammar ∷ Grammar ByteString IpvFuture
 ipvFutureGrammar =
   label "IPvFuture"
     $ isoGrammar
@@ -86,7 +86,7 @@ ipvFutureGrammar =
         )
 
 -- | Parsing is much more lenient than the spec out of laziness, could be improved
-ipv6AddressGrammar ∷ Grammar ByteString
+ipv6AddressGrammar ∷ Grammar ByteString ByteString
 ipv6AddressGrammar =
   label
     "IPv6address"
@@ -121,7 +121,7 @@ ipv6AddressGrammar =
   rep' a = rep a a
   (^) = liftA2 (<>)
   opt g = QC.oneof [pure "", g]
-  h16, ls32 ∷ Gen Builder
+  h16, ls32 ∷ Gen (Builder ByteString)
   h16 = do
     n ← QC.choose (1, 4)
     fmap fold $ QC.vectorOf n $ BSB.word8 <$> grammarGenerator hex
@@ -132,7 +132,7 @@ ipv6AddressGrammar =
       ]
   hex = hexdigCharGrammar UpperCase
 
-ipv4AddressGrammar ∷ Grammar ByteString
+ipv4AddressGrammar ∷ Grammar ByteString ByteString
 ipv4AddressGrammar =
   label
     "IPv4address"
@@ -147,7 +147,7 @@ ipv4AddressGrammar =
             replicateM 4 (renderGenerator decOctetGrammar)
       }
 
-decOctetGrammar ∷ Grammar Word8
+decOctetGrammar ∷ Grammar ByteString Word8
 decOctetGrammar =
   label
     "dec-octet"
@@ -160,7 +160,7 @@ decOctetGrammar =
       , generator = arbitrary
       }
 
-regNameGrammar ∷ Grammar ByteString
+regNameGrammar ∷ Grammar ByteString ByteString
 regNameGrammar =
   label "reg-name" $
     isoGrammar (iso BS.unpack BS.pack) $
@@ -180,5 +180,5 @@ instance Arbitrary IpLiteral where
 instance Arbitrary IpvFuture where
   arbitrary = ipvFutureGrammar.generator
 
-renderHost ∷ Host → Builder
+renderHost ∷ Host → Builder ByteString
 renderHost = forceRenderCanonical hostGrammar

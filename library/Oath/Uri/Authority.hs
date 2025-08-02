@@ -21,7 +21,7 @@ data Authority = Authority
 
 makeFieldLabels ''Authority
 
-authorityGrammar ∷ Grammar Authority
+authorityGrammar ∷ Grammar ByteString Authority
 authorityGrammar =
   label "authority"
     $ isoGrammar
@@ -33,7 +33,7 @@ authorityGrammar =
       <+> hostGrammar
       <+> optionalGrammar (constGrammar ":" +> portGrammar)
 
-userinfoGrammar ∷ Grammar ByteString
+userinfoGrammar ∷ Grammar ByteString ByteString
 userinfoGrammar =
   label "userinfo" $
     isoGrammar (iso BS.unpack BS.pack) $
@@ -45,7 +45,7 @@ userinfoGrammar =
           , tokenEnumeration $ char <$> ":"
           ]
 
-portGrammar ∷ Grammar ByteString
+portGrammar ∷ Grammar ByteString ByteString
 portGrammar =
   label "port" $
     isoGrammar (iso BS.unpack BS.pack) $

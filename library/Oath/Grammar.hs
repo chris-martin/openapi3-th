@@ -6,7 +6,7 @@ import Control.Applicative (asum, liftA2)
 import Control.Exception (Exception, throw)
 import Control.Monad (guard)
 import Data.ByteString (ByteString)
-import Data.ByteString.Builder (Builder)
+import Data.ByteString.Builder ()
 import Data.ByteString.Builder qualified as BSB
 import Data.Either (either)
 import Data.Foldable (fold, toList)
@@ -16,7 +16,9 @@ import Data.List.NonEmpty (NonEmpty ((:|)), nonEmpty)
 import Data.Maybe (mapMaybe)
 import Data.Sequence (Seq (..))
 import Data.Sequence qualified as Seq
-import Data.Word
+import Data.Text (Text)
+import Data.Text.Lazy.Builder qualified as TB
+import Data.Type.Equality
 import Optics
 import Test.QuickCheck (Gen)
 import Test.QuickCheck qualified as QC
@@ -31,7 +33,22 @@ infixl 4 <+
 
 data a :& b = a :& b
 
-(<+>) ∷ Grammar a → Grammar b → Grammar (a :& b)
+class (P.Stream s, P.Tokens s ~ s, Monoid s, Monoid (Builder s)) ⇒ StringLike s where
+  type Builder s ∷ Type
+  toBuilder ∷ s → Builder s
+  tokenBuilder ∷ P.Token s → Builder s
+
+instance StringLike ByteString where
+  type Builder ByteString = BSB.Builder
+  toBuilder = BSB.byteString
+  tokenBuilder = BSB.word8
+
+instance StringLike Text where
+  type Builder Text = TB.Builder
+  toBuilder = TB.fromText
+  tokenBuilder = TB.singleton
+
+(<+>) ∷ StringLike s ⇒ Grammar s a → Grammar s b → Grammar s (a :& b)
 ga <+> gb =
   Grammar
     { render = \(a :& b) → liftA2 (<>) (ga.render a) (gb.render b)
@@ -39,7 +56,7 @@ ga <+> gb =
     , generator = (:&) <$> ga.generator <*> gb.generator
     }
 
-(+>) ∷ Grammar () → Grammar b → Grammar b
+(+>) ∷ StringLike s ⇒ Grammar s () → Grammar s b → Grammar s b
 ga +> gb =
   Grammar
     { render = \b → liftA2 (<>) (ga.render ()) (gb.render b)
@@ -47,7 +64,7 @@ ga +> gb =
     , generator = gb.generator
     }
 
-(<+) ∷ Grammar a → Grammar () → Grammar a
+(<+) ∷ StringLike s ⇒ Grammar s a → Grammar s () → Grammar s a
 ga <+ gb =
   Grammar
     { render = \a → liftA2 (<>) (ga.render a) (gb.render ())
@@ -55,33 +72,33 @@ ga <+ gb =
     , generator = ga.generator
     }
 
-data Grammar a
+data Grammar s a
   = Grammar
-  { parser ∷ Parsec Void ByteString a
+  { parser ∷ Parsec Void s a
   , generator ∷ Gen a
-  , render ∷ a → Maybe Render
+  , render ∷ a → Maybe (Render s)
   }
 
-data Render = Render
-  { canonical ∷ Builder
-  , generator ∷ Gen Builder
+data Render s = Render
+  { canonical ∷ Builder s
+  , generator ∷ Gen (Builder s)
   }
 
-instance Semigroup Render where
+instance StringLike s ⇒ Semigroup (Render s) where
   a <> b =
     Render
       { canonical = a.canonical <> b.canonical
       , generator = liftA2 (<>) a.generator b.generator
       }
 
-instance Monoid Render where
+instance StringLike s ⇒ Monoid (Render s) where
   mempty = Render {canonical = mempty, generator = pure mempty}
 
-renderConst ∷ Builder → Render
+renderConst ∷ Builder s → Render s
 renderConst canonical =
   Render {canonical, generator = pure canonical}
 
-renderChoices ∷ [a → Maybe Render] → a → Maybe Render
+renderChoices ∷ [a → Maybe (Render s)] → a → Maybe (Render s)
 renderChoices xs x = do
   os@(o :| _) ← nonEmpty $ mapMaybe ($ x) xs
   pure
@@ -90,40 +107,40 @@ renderChoices xs x = do
       , generator = QC.oneof $ fmap (.generator) $ toList os
       }
 
-grammarRender ∷ Grammar a → a → Maybe Render
+grammarRender ∷ Grammar s a → a → Maybe (Render s)
 grammarRender = (.render)
 
-grammarParser ∷ Grammar a → Parsec Void ByteString a
+grammarParser ∷ Grammar s a → Parsec Void s a
 grammarParser = (.parser)
 
-grammarGenerator ∷ Grammar a → Gen a
+grammarGenerator ∷ Grammar s a → Gen a
 grammarGenerator = (.generator)
 
-renderGenerator ∷ Grammar a → Gen Builder
+renderGenerator ∷ Grammar s a → Gen (Builder s)
 renderGenerator g = do
   a ← g.generator
   case g.render a of
     Nothing → error "generator should only generate renderable values"
     Just r → r.generator
 
-label ∷ String → Grammar a → Grammar a
+label ∷ StringLike s ⇒ String → Grammar s a → Grammar s a
 label l g = g {parser = P.label l g.parser}
 
-tokenEnumeration ∷ [Word8] → Grammar Word8
+tokenEnumeration ∷ StringLike s ⇒ [P.Token s] → Grammar s (P.Token s)
 tokenEnumeration xs =
   tokenPredicate (`List.elem` xs) (QC.elements xs)
 
-tokenPredicate ∷ (Word8 → Bool) → Gen Word8 → Grammar Word8
+tokenPredicate ∷ ∀ s. StringLike s ⇒ (P.Token s → Bool) → Gen (P.Token s) → Grammar s (P.Token s)
 tokenPredicate f generator =
   Grammar
     { parser = P.satisfy f
     , generator
     , render = \x → do
         guard $ f x
-        Just $ renderConst $ BSB.word8 x
+        Just $ renderConst $ tokenBuilder @s x
     }
 
-grammarAlternatives ∷ [Grammar a] → Grammar a
+grammarAlternatives ∷ StringLike s ⇒ [Grammar s a] → Grammar s a
 grammarAlternatives xs =
   Grammar
     { render = \a → asum @[] $ fmap (\x → x.render a) xs
@@ -131,7 +148,7 @@ grammarAlternatives xs =
     , generator = QC.oneof $ fmap (.generator) xs
     }
 
-prismGrammar ∷ Prism' b a → Grammar a → Grammar b
+prismGrammar ∷ Prism' b a → Grammar s a → Grammar s b
 prismGrammar p Grammar {render, parser, generator} =
   Grammar
     { render = render <=< preview p
@@ -139,18 +156,18 @@ prismGrammar p Grammar {render, parser, generator} =
     , generator = review p <$> generator
     }
 
-isoGrammar ∷ Iso' b a → Grammar a → Grammar b
+isoGrammar ∷ Iso' b a → Grammar s a → Grammar s b
 isoGrammar = prismGrammar . castOptic
 
-constGrammar ∷ ByteString → Grammar ()
+constGrammar ∷ StringLike s ⇒ s → Grammar s ()
 constGrammar x =
   Grammar
-    { render = \() → Just $ renderConst $ BSB.byteString x
+    { render = \() → Just $ renderConst $ toBuilder x
     , parser = void $ P.chunk x
     , generator = pure ()
     }
 
-emptyGrammar ∷ Grammar ()
+emptyGrammar ∷ StringLike s ⇒ Grammar s ()
 emptyGrammar =
   Grammar
     { render = \() → Just $ renderConst mempty
@@ -158,15 +175,15 @@ emptyGrammar =
     , generator = pure ()
     }
 
-bracketGrammar ∷ ByteString → ByteString → Grammar a → Grammar a
+bracketGrammar ∷ StringLike s ⇒ s → s → Grammar s a → Grammar s a
 bracketGrammar open close Grammar {render, parser, generator} =
   Grammar
     { render = \x →
         ( \r →
             fold @[]
-              [ renderConst $ BSB.byteString open
+              [ renderConst $ toBuilder open
               , r
-              , renderConst $ BSB.byteString close
+              , renderConst $ toBuilder close
               ]
         )
           <$> render x
@@ -174,7 +191,7 @@ bracketGrammar open close Grammar {render, parser, generator} =
     , generator
     }
 
-listGrammar ∷ Grammar a → Grammar [a]
+listGrammar ∷ StringLike s ⇒ Grammar s a → Grammar s [a]
 listGrammar Grammar {render, parser, generator} =
   Grammar
     { render = fmap (fold @[]) . traverse render
@@ -182,7 +199,7 @@ listGrammar Grammar {render, parser, generator} =
     , generator = QC.listOf generator
     }
 
-seqGrammar ∷ Grammar a → Grammar (Seq a)
+seqGrammar ∷ StringLike s ⇒ Grammar s a → Grammar s (Seq a)
 seqGrammar Grammar {render, parser, generator} =
   Grammar
     { render = fmap (fold @Seq) . traverse render
@@ -190,7 +207,7 @@ seqGrammar Grammar {render, parser, generator} =
     , generator = fmap Seq.fromList $ QC.listOf generator
     }
 
-list1Grammar ∷ Grammar a → Grammar (NonEmpty a)
+list1Grammar ∷ StringLike s ⇒ Grammar s a → Grammar s (NonEmpty a)
 list1Grammar Grammar {render, parser, generator} =
   Grammar
     { render = fmap (fold @NonEmpty) . traverse render
@@ -201,7 +218,7 @@ list1Grammar Grammar {render, parser, generator} =
   f (x : xs) = x :| xs
   f [] = undefined
 
-optionalGrammar ∷ Grammar a → Grammar (Maybe a)
+optionalGrammar ∷ StringLike s ⇒ Grammar s a → Grammar s (Maybe a)
 optionalGrammar Grammar {render, parser, generator} =
   Grammar
     { render = fmap (fold @Maybe) . traverse render
@@ -209,7 +226,7 @@ optionalGrammar Grammar {render, parser, generator} =
     , generator = QC.liftArbitrary generator
     }
 
-forceRenderCanonical ∷ Grammar a → a → Builder
+forceRenderCanonical ∷ Grammar s a → a → Builder s
 forceRenderCanonical Grammar {render} x =
   case render x of
     Just Render {canonical} → canonical
@@ -219,6 +236,6 @@ data Unrenderable = Unrenderable
   deriving stock (Eq, Show)
   deriving anyclass Exception
 
-readGrammarMaybe ∷ Grammar a → ByteString → Maybe a
+readGrammarMaybe ∷ StringLike s ⇒ Grammar s a → s → Maybe a
 readGrammarMaybe Grammar {parser} =
   either (const Nothing) Just . P.parse (parser <* P.eof) ""

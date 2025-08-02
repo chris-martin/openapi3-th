@@ -24,7 +24,7 @@ makeFieldLabels ''RelativeRef
 instance LabelOptic "authority" An_AffineTraversal RelativeRef RelativeRef Authority Authority where
   labelOptic = #hierPart % #_HierPart_Authority % _1
 
-relativeRefGrammar ∷ Grammar RelativeRef
+relativeRefGrammar ∷ Grammar ByteString RelativeRef
 relativeRefGrammar =
   label "relative-ref"
     $ isoGrammar

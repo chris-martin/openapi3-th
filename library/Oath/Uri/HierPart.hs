@@ -61,7 +61,7 @@ instance LabelOptic "path" A_Lens HierPart HierPart (Seq ByteString) (Seq ByteSt
 instance LabelOptic "authority" An_AffineTraversal HierPart HierPart Authority Authority where
   labelOptic = #_HierPart_Authority % _1
 
-hierPartGrammar ∷ Grammar HierPart
+hierPartGrammar ∷ Grammar ByteString HierPart
 hierPartGrammar =
   label "hier-part" $
     grammarAlternatives
@@ -77,7 +77,7 @@ hierPartGrammar =
       , prismGrammar (#_HierPart_Relative % only Seq.Empty) pathEmptyGrammar
       ]
 
-relativePartGrammar ∷ Grammar HierPart
+relativePartGrammar ∷ Grammar ByteString HierPart
 relativePartGrammar =
   label "relative-part" $
     grammarAlternatives

@@ -30,7 +30,7 @@ instance LabelOptic "authority" An_AffineTraversal Uri Uri Authority Authority w
 instance LabelOptic "path" A_Lens Uri Uri (Seq ByteString) (Seq ByteString) where
   labelOptic = #hierPart % #path
 
-uriGrammar ∷ Grammar Uri
+uriGrammar ∷ Grammar ByteString Uri
 uriGrammar =
   label "URI"
     $ isoGrammar

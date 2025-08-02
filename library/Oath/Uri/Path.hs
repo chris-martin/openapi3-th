@@ -21,13 +21,13 @@ removeDotSegments = go Empty
     xs :|> _ :|> ".." → go t xs
     xs :|> x → go (x :<| t) xs
 
-pathAbemptyGrammar ∷ Grammar (Seq ByteString)
+pathAbemptyGrammar ∷ Grammar ByteString (Seq ByteString)
 pathAbemptyGrammar =
   label "path-abempty" $
     seqGrammar $
       constGrammar "/" +> segmentGrammar
 
-pathAbsoluteGrammar ∷ Grammar (Seq ByteString)
+pathAbsoluteGrammar ∷ Grammar ByteString (Seq ByteString)
 pathAbsoluteGrammar =
   label "path-absolute"
     $ isoGrammar
@@ -39,7 +39,7 @@ pathAbsoluteGrammar =
       +> optionalGrammar
         (segmentNzGrammar <+> seqGrammar (constGrammar "/" +> segmentGrammar))
 
-pathNoschemeGrammar ∷ Grammar (NESeq ByteString)
+pathNoschemeGrammar ∷ Grammar ByteString (NESeq ByteString)
 pathNoschemeGrammar =
   label "path-noscheme"
     $ isoGrammar
@@ -50,7 +50,7 @@ pathNoschemeGrammar =
     $ segmentNzNcGrammar
       <+> seqGrammar (constGrammar "/" +> segmentGrammar)
 
-pathRootlessGrammar ∷ Grammar (NESeq ByteString)
+pathRootlessGrammar ∷ Grammar ByteString (NESeq ByteString)
 pathRootlessGrammar =
   label "path-rootless"
     $ isoGrammar
@@ -61,5 +61,5 @@ pathRootlessGrammar =
     $ segmentNzGrammar
       <+> seqGrammar (constGrammar "/" +> segmentGrammar)
 
-pathEmptyGrammar ∷ Grammar ()
+pathEmptyGrammar ∷ Grammar ByteString ()
 pathEmptyGrammar = emptyGrammar

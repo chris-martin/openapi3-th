@@ -59,7 +59,7 @@ uriReferenceRelativeRefPrism =
         pure RelativeRef {hierPart, query, fragment}
     )
 
-uriReferenceGrammar ∷ Grammar UriReference
+uriReferenceGrammar ∷ Grammar ByteString UriReference
 uriReferenceGrammar =
   label "URI-reference" $
     grammarAlternatives

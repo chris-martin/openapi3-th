@@ -3,6 +3,7 @@ module Oath.Uri.Characters where
 import Essentials
 
 import Data.Bits (shiftL, shiftR, (.&.))
+import Data.ByteString (ByteString)
 import Data.Word
 import Optics
 import Prelude ((+))
@@ -10,7 +11,7 @@ import Prelude ((+))
 import Oath.Abnf
 import Oath.Grammar
 
-pcharGrammar ∷ Grammar Word8
+pcharGrammar ∷ Grammar ByteString Word8
 pcharGrammar =
   label "pchar" $
     grammarAlternatives
@@ -20,7 +21,7 @@ pcharGrammar =
       , pctEncodedGrammar
       ]
 
-pctEncodedGrammar ∷ Grammar Word8
+pctEncodedGrammar ∷ Grammar ByteString Word8
 pctEncodedGrammar =
   label "pct-encoded"
     $ isoGrammar
@@ -32,7 +33,7 @@ pctEncodedGrammar =
       +> hexdigNumGrammar UpperCase
       <+> hexdigNumGrammar UpperCase
 
-unreservedGrammar ∷ Grammar Word8
+unreservedGrammar ∷ Grammar ByteString Word8
 unreservedGrammar =
   label "unreserved" $
     grammarAlternatives
@@ -41,16 +42,16 @@ unreservedGrammar =
       , tokenEnumeration $ char <$> "-._~"
       ]
 
-reservedGrammar ∷ Grammar Word8
+reservedGrammar ∷ Grammar ByteString Word8
 reservedGrammar = label "reserved" $ tokenEnumeration $ genDelims <> subDelims
 
-genDelimGrammar ∷ Grammar Word8
+genDelimGrammar ∷ Grammar ByteString Word8
 genDelimGrammar = label "gen-delims" $ tokenEnumeration genDelims
 
 genDelims ∷ [Word8]
 genDelims = char <$> ":/?#[]@"
 
-subDelimGrammar ∷ Grammar Word8
+subDelimGrammar ∷ Grammar ByteString Word8
 subDelimGrammar = label "sub-delims" $ tokenEnumeration subDelims
 
 subDelims ∷ [Word8]

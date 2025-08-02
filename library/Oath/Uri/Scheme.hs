@@ -11,7 +11,7 @@ import Optics
 import Oath.Abnf
 import Oath.Grammar
 
-schemeGrammar ∷ Grammar ByteString
+schemeGrammar ∷ Grammar ByteString ByteString
 schemeGrammar =
   label "scheme"
     $ prismGrammar

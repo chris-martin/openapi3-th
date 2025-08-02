@@ -5,7 +5,6 @@ module Oath.Http where
 import Essentials
 
 import Data.ByteString (ByteString)
-import Data.ByteString.Builder (Builder)
 import Data.Sequence
 
 import Oath.Grammar
@@ -13,7 +12,7 @@ import Oath.Uri.Path
 
 -- | Render a path for an HTTP request in origin form
 -- <https://www.rfc-editor.org/rfc/rfc7230.html#section-5.3.1>
-renderPath ∷ Seq ByteString → Builder
+renderPath ∷ Seq ByteString → Builder ByteString
 renderPath =
   forceRenderCanonical pathAbemptyGrammar
     . \case Empty → singleton ""; xs → xs
