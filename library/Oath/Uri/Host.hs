@@ -97,7 +97,7 @@ ipv6AddressGrammar =
             P.match $
               some $
                 asum @[]
-                  [ void $ parser hex
+                  [ void $ grammarParser hex
                   , void $ P.single $ char ':'
                   ]
       , generator =
@@ -124,7 +124,7 @@ ipv6AddressGrammar =
   h16, ls32 ∷ Gen Builder
   h16 = do
     n ← QC.choose (1, 4)
-    fmap fold $ QC.vectorOf n $ BSB.word8 <$> generator hex
+    fmap fold $ QC.vectorOf n $ BSB.word8 <$> grammarGenerator hex
   ls32 =
     QC.oneof
       [ h16 ^ pure ":" ^ h16

@@ -41,7 +41,6 @@ import Oath.Operation.OutgoingRequest qualified as OReq
 import Oath.Operation.OutgoingResponse (OutgoingResponse (OutgoingResponse))
 import Oath.Operation.OutgoingResponse qualified as OResp
 import Oath.Operation.Wai
-import Oath.Web
 
 oath ∷ (MonadFail m, Quote m) ⇒ OptionsM () → m [Dec]
 oath optionsM = do

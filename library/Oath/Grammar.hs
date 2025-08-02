@@ -89,14 +89,14 @@ renderChoices xs x = do
       , generator = QC.oneof $ fmap (.generator) $ toList os
       }
 
-render ∷ Grammar a → a → Maybe Render
-render = (.render)
+grammarRender ∷ Grammar a → a → Maybe Render
+grammarRender = (.render)
 
-parser ∷ Grammar a → Parsec Void ByteString a
-parser = (.parser)
+grammarParser ∷ Grammar a → Parsec Void ByteString a
+grammarParser = (.parser)
 
-generator ∷ Grammar a → Gen a
-generator = (.generator)
+grammarGenerator ∷ Grammar a → Gen a
+grammarGenerator = (.generator)
 
 renderGenerator ∷ Grammar a → Gen Builder
 renderGenerator g = do
