@@ -5,6 +5,7 @@ import Essentials
 import Control.Applicative (asum, liftA2)
 import Control.Exception (Exception, throw)
 import Control.Monad (guard)
+import Data.Bool ((&&))
 import Data.ByteString (ByteString)
 import Data.ByteString.Builder ()
 import Data.ByteString.Builder qualified as BSB
@@ -20,6 +21,7 @@ import Data.Text (Text)
 import Data.Text.Lazy.Builder qualified as TB
 import Data.Type.Equality
 import Optics
+import System.Random (Random)
 import Test.QuickCheck (Gen)
 import Test.QuickCheck qualified as QC
 import Text.Megaparsec (Parsec)
@@ -129,6 +131,20 @@ label l g = g {parser = P.label l g.parser}
 tokenEnumeration ∷ StringLike s ⇒ [P.Token s] → Grammar s (P.Token s)
 tokenEnumeration xs =
   tokenPredicate (`List.elem` xs) (QC.elements xs)
+
+tokenRange
+  ∷ ∀ s
+   . (StringLike s, Random (P.Token s))
+  ⇒ (P.Token s, P.Token s) → Grammar s (P.Token s)
+tokenRange (a, b) =
+  Grammar
+    { generator = QC.choose (a, b)
+    , parser = P.satisfy $ \x → x >= a && x <= b
+    , render = \x → do
+        guard $ x >= a
+        guard $ x <= b
+        Just $ renderConst $ tokenBuilder @s x
+    }
 
 tokenPredicate ∷ ∀ s. StringLike s ⇒ (P.Token s → Bool) → Gen (P.Token s) → Grammar s (P.Token s)
 tokenPredicate f generator =

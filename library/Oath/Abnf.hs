@@ -35,16 +35,10 @@ char = fromIntegral . Char.ord
 alphaGrammar ∷ Grammar ByteString Word8
 alphaGrammar =
   label "ALPHA" $
-    tokenPredicate
-      ( \x →
-          (x >= char 'a' && x <= char 'z')
-            || (x >= char 'A' && x <= char 'Z')
-      )
-      ( QC.oneof
-          [ QC.choose (char 'a', char 'z')
-          , QC.choose (char 'A', char 'Z')
-          ]
-      )
+    grammarAlternatives
+      [ tokenRange (char 'a', char 'z')
+      , tokenRange (char 'A', char 'Z')
+      ]
 
 digitNumGrammar ∷ Grammar ByteString Word8
 digitNumGrammar =
@@ -60,13 +54,7 @@ digitNumGrammar =
 
 digitCharGrammar ∷ Grammar ByteString Word8
 digitCharGrammar =
-  label
-    "DIGIT"
-    Grammar
-      { render = Just . renderConst . BSB.word8
-      , parser = P.satisfy (\x → x >= char '0' && x <= char '0')
-      , generator = QC.choose (char '0', char '9')
-      }
+  label "DIGIT" $ tokenRange (char '0', char '9')
 
 data Case = UpperCase | LowerCase
   deriving stock (Eq, Ord, Show, Enum, Bounded, Generic)

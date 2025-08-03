@@ -55,6 +55,7 @@ library
     , optics-core
     , quaalude
     , QuickCheck
+    , random
     , template-haskell
     , text
     , transformers
